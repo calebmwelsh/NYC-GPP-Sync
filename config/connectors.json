@@ -1,0 +1,41 @@
+{
+  "abe0d464551542ec9a10b1a734903316": {
+    "name": "Progress 2024",
+    "description": "for progress q1",
+    "filters": {
+      "SEARCH_QUERY": "progress report",
+      "SEARCH_LIMIT": "5",
+      "SEARCH_AGENCY": "",
+      "SEARCH_SUBJECT": "",
+      "SEARCH_REPORT_TYPE": "",
+      "SEARCH_FISCAL_YEAR": "",
+      "SEARCH_BOROUGH": ""
+    }
+  },
+  "42da3f557da24e11b20991c531fba2d4": {
+    "name": "DHS",
+    "description": "Test",
+    "filters": {
+      "SEARCH_QUERY": "dhs",
+      "SEARCH_LIMIT": "5",
+      "SEARCH_AGENCY": "",
+      "SEARCH_SUBJECT": "",
+      "SEARCH_REPORT_TYPE": "",
+      "SEARCH_FISCAL_YEAR": "",
+      "SEARCH_BOROUGH": ""
+    }
+  },
+  "f43ed65fc3284618a0562e4d6ad25042": {
+    "name": "test",
+    "description": "test",
+    "filters": {
+      "SEARCH_QUERY": "progress report",
+      "SEARCH_LIMIT": "5",
+      "SEARCH_AGENCY": "",
+      "SEARCH_SUBJECT": "",
+      "SEARCH_REPORT_TYPE": "",
+      "SEARCH_FISCAL_YEAR": "",
+      "SEARCH_BOROUGH": ""
+    }
+  }
+}

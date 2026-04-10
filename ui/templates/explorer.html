@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="page-title">GPP Ingest Portal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Palette: Deep Indigo / Purple / Violet Theme */
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #4c1d95 100%);
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-secondary: #d8b4fe;
+            --accent-primary: #a855f7;
+            --accent-hover: #9333ea;
+            --accent-glow: rgba(168, 85, 247, 0.5);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --input-bg: rgba(15, 23, 42, 0.6);
+            --input-border: rgba(216, 180, 254, 0.2);
+            --input-focus: #a855f7;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            padding: 40px;
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            color: var(--text-main);
+            font-size: 28px;
+            font-weight: 700;
+            margin: 0 0 10px 0;
+            letter-spacing: -0.5px;
+            text-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 15px;
+            font-weight: 400;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .full-width {
+            grid-column: span 2;
+        }
+
+        @media (max-width: 640px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .full-width {
+                grid-column: span 1;
+            }
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+        }
+
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            padding: 14px 16px;
+            background-color: var(--input-bg);
+            border: 1px solid var(--input-border);
+            border-radius: 12px;
+            color: var(--text-main);
+            font-size: 15px;
+            font-family: inherit;
+            transition: all 0.2s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--input-focus);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+        }
+
+        /* Custom Multi-Select Styling */
+        .multi-select-container {
+            position: relative;
+            width: 100%;
+        }
+
+        .multi-select-trigger {
+            background-color: var(--input-bg);
+            border: 1px solid var(--input-border);
+            border-radius: 12px;
+            padding: 10px 12px;
+            min-height: 48px;
+            cursor: pointer;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+
+        .multi-select-trigger.active {
+            border-color: var(--input-focus);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+
+        .pill {
+            background-color: rgba(168, 85, 247, 0.2);
+            color: #d8b4fe;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid rgba(168, 85, 247, 0.3);
+        }
+
+        .pill-close {
+            cursor: pointer;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            max-height: 300px;
+            overflow-y: auto;
+            background-color: #1e293b;
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            margin-top: 8px;
+            z-index: 100;
+            display: none;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            padding: 8px;
+        }
+
+        .dropdown-menu.show {
+            display: block;
+        }
+
+        .dropdown-search {
+            width: 100%;
+            padding: 10px;
+            background-color: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--input-border);
+            border-radius: 8px;
+            color: var(--text-main);
+            margin-bottom: 8px;
+        }
+
+        .option-item {
+            padding: 10px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .option-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+        }
+
+        .option-item.selected {
+            color: var(--accent-primary);
+            background: rgba(168, 85, 247, 0.1);
+        }
+
+        .checkbox {
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--text-secondary);
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .selected .checkbox {
+            background-color: var(--accent-primary);
+            border-color: var(--accent-primary);
+        }
+
+        /* Action Buttons */
+        .actions {
+            display: flex;
+            gap: 16px;
+            margin-top: 40px;
+            justify-content: flex-end;
+            padding-top: 20px;
+            border-top: 1px solid var(--card-border);
+        }
+
+        button {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-run {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-hover));
+            color: white;
+            box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3);
+        }
+
+        .btn-run:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+        }
+
+        .btn-save {
+            background-color: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--input-border);
+        }
+
+        .btn-save:hover {
+            color: var(--text-main);
+            border-color: var(--text-secondary);
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--input-border);
+        }
+
+        .btn-secondary:hover {
+            color: var(--text-main);
+            border-color: var(--text-secondary);
+        }
+
+        /* Results Table */
+        .results-container {
+            margin-top: 32px;
+            display: none;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 16px;
+        }
+
+        th {
+            text-align: left;
+            font-size: 12px;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            padding: 12px;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 14px;
+        }
+
+        tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        /* Logs */
+        .log-box-container {
+            margin-top: 24px;
+            background: #0f172a;
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .log-header {
+            padding: 12px 16px;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid var(--card-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .log-content {
+            padding: 16px;
+            font-family: monospace;
+            font-size: 13px;
+            color: #e2e8f0;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+            line-height: 1.5;
+        }
+
+        #status-area {
+            margin-top: 24px;
+            padding: 16px;
+            border-radius: 12px;
+            background-color: rgba(15, 23, 42, 0.5);
+            display: none;
+            border-left: 4px solid;
+            font-size: 14px;
+        }
+
+        .status-running {
+            border-color: var(--warning);
+            color: #fbbf24;
+            background-color: rgba(245, 158, 11, 0.1);
+        }
+
+        .status-completed {
+            border-color: var(--success);
+            color: #34d399;
+            background-color: rgba(16, 185, 129, 0.1);
+        }
+
+        #status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #94a3b8;
+            margin-right: 8px;
+        }
+
+        .running #status-indicator {
+            background: var(--accent-primary);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+            }
+
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 6px rgba(59, 130, 246, 0);
+            }
+
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+            }
+        }
+
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 9999;
+        }
+
+        .toast {
+            min-width: 250px;
+            padding: 16px 20px;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            animation: slideInRight 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+        }
+
+        .toast.success { background: rgba(16, 185, 129, 0.9); border: 1px solid rgba(16, 185, 129, 1); }
+        .toast.error { background: rgba(239, 68, 68, 0.9); border: 1px solid rgba(239, 68, 68, 1); }
+
+        @keyframes slideInRight {
+            from { transform: translateX(110%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <a href="/" style="color: var(--text-secondary); text-decoration: none; display: flex; align-items: center; gap: 6px; font-weight: 500; font-size: 14px; transition: color 0.2s;">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                    Back to Connectors
+                </a>
+            </div>
+            <h1>Explorer Interface</h1>
+            <div class="subtitle">NYC Government Publications Portal</div>
+        </header>
+
+        <div class="form-grid">
+
+            <div class="form-group full-width">
+                <label>Keyword Query</label>
+                <input type="text" id="SEARCH_QUERY" placeholder="e.g. 'Mayor', 'Budget'...">
+            </div>
+
+            <div class="form-group">
+                <label>Agency</label>
+                <div id="agency-select" class="multi-select-container"></div>
+            </div>
+
+            <div class="form-group">
+                <label>Subject</label>
+                <div id="subject-select" class="multi-select-container"></div>
+            </div>
+
+            <div class="form-group">
+                <label>Report Type</label>
+                <div id="report-select" class="multi-select-container"></div>
+            </div>
+
+            <div class="form-group">
+                <label>Fiscal Year</label>
+                <div id="year-select" class="multi-select-container"></div>
+            </div>
+
+            <div class="form-group">
+                <label>Borough</label>
+                <div id="borough-select" class="multi-select-container"></div>
+            </div>
+
+            <div class="form-group">
+                <label>Result Limit</label>
+                <input type="number" id="SEARCH_LIMIT" value="10">
+            </div>
+        </div>
+
+        <div class="actions">
+            <button class="btn-secondary" onclick="toggleLogs()" style="margin-right: auto;">
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                </svg>
+                Debug Logs
+            </button>
+            <button class="btn-save" onclick="openSaveModal()">
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4">
+                    </path>
+                </svg>
+                Save as Connector
+            </button>
+            <button class="btn-run" onclick="runSearch()" id="btn-search">
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+                Search
+            </button>
+            <button class="btn-secondary" onclick="runDownload()" id="btn-download"
+                style="border-color: var(--success); color: var(--success);">
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                </svg>
+                Download
+            </button>
+        </div>
+
+        <div id="results-section" class="results-container">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2 style="font-size: 20px; font-weight: 600; margin: 0;">Search Results</h2>
+                <span id="results-count"
+                    style="color: var(--text-secondary); font-size: 14px; font-weight: 500;"></span>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Title</th>
+                        <th>Agency</th>
+                        <th>Date</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="results-body"></tbody>
+            </table>
+        </div>
+
+        <div id="status-area">
+            <span id="status-icon"></span>
+            <span id="status-text">Idle</span>
+        </div>
+
+        <div id="log-container" class="log-box-container">
+            <div class="log-header">
+                <span>Terminal Output</span>
+                <span style="cursor: pointer; color: var(--accent-primary);"
+                    onclick="document.getElementById('log-box').innerText = ''">Clear</span>
+            </div>
+            <div class="log-content" id="log-box"></div>
+        </div>
+    </div>
+
+    <!-- Modal for saving connector -->
+    <div id="save-modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background: var(--card-bg); padding: 30px; border-radius: 16px; width: 400px; border: 1px solid var(--card-border); box-shadow: 0 20px 40px rgba(0,0,0,0.6);">
+            <h2 style="margin-top: 0; font-size: 20px; color: var(--text-main);">Save Connector</h2>
+            <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px;">Save the current filters to reuse this workspace context later.</p>
+            
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label>Connector Name</label>
+                <input type="text" id="connector_name" placeholder="e.g. Veteran Services Reports">
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 24px;">
+                <label>Description</label>
+                <input type="text" id="connector_desc" placeholder="Monthly parsing for veterans">
+            </div>
+
+            <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                <button class="btn-secondary" onclick="closeSaveModal()">Cancel</button>
+                <button class="btn-run" onclick="submitSaveConnector()">Save Connector</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let config = {};
+        const state = {
+            agency: new Set(),
+            subject: new Set(),
+            report: new Set(),
+            year: new Set(),
+            borough: new Set()
+        };
+
+        async function init() {
+            const resp = await fetch('/api/config');
+            config = await resp.json();
+
+            // Map ENV to state
+            syncEnvToState(config.current_env);
+
+            initMultiSelect('agency-select', 'agency', config.filters['agency_sim'], "All Agencies");
+            initMultiSelect('subject-select', 'subject', config.filters['subject_sim'], "All Subjects");
+            initMultiSelect('report-select', 'report', config.filters['report_type_sim'], "All Types");
+            initMultiSelect('year-select', 'year', config.filters['fiscal_year_sim'], "All Years");
+            initMultiSelect('borough-select', 'borough', config.filters['borough_sim'], "All Boroughs");
+
+            document.getElementById('SEARCH_QUERY').value = config.current_env.SEARCH_QUERY || '';
+            document.getElementById('SEARCH_LIMIT').value = config.current_env.SEARCH_LIMIT || '10';
+
+            pollStatus();
+            pollLogs();
+        }
+
+        function syncEnvToState(env) {
+            initSet(state.agency, env.SEARCH_AGENCY);
+            initSet(state.subject, env.SEARCH_SUBJECT);
+            initSet(state.report, env.SEARCH_REPORT_TYPE);
+            initSet(state.year, env.SEARCH_FISCAL_YEAR);
+            initSet(state.borough, env.SEARCH_BOROUGH);
+        }
+
+        function initSet(setObj, envString) {
+            setObj.clear();
+            if (!envString) return;
+            envString.split('|').forEach(s => { if (s.trim()) setObj.add(s.trim()); });
+        }
+
+        function initMultiSelect(elementId, stateKey, facet, placeholder) {
+            const container = document.getElementById(elementId);
+            const items = facet ? facet.values : [];
+
+            container.innerHTML = `
+                <div class="multi-select-trigger" tabIndex="0">
+                    <div class="pills-content" style="display:contents"></div>
+                </div>
+                <div class="dropdown-menu">
+                    <input type="text" class="dropdown-search" placeholder="Filter...">
+                    <div class="options-list"></div>
+                </div>
+            `;
+
+            const trigger = container.querySelector('.multi-select-trigger');
+            const dropdown = container.querySelector('.dropdown-menu');
+            const search = container.querySelector('.dropdown-search');
+            const optionsList = container.querySelector('.options-list');
+            const pillsContent = container.querySelector('.pills-content');
+
+            const render = () => {
+                pillsContent.innerHTML = '';
+                if (state[stateKey].size === 0) {
+                    pillsContent.innerHTML = `<span style="color:var(--text-secondary); font-size:14px">-- ${placeholder} --</span>`;
+                } else {
+                    state[stateKey].forEach(val => {
+                        const pill = document.createElement('div');
+                        pill.className = 'pill';
+                        pill.innerHTML = `<span>${val}</span><span class="pill-close">&times;</span>`;
+                        pill.querySelector('.pill-close').onclick = (e) => {
+                            e.stopPropagation();
+                            state[stateKey].delete(val);
+                            render();
+                        };
+                        pillsContent.appendChild(pill);
+                    });
+                }
+
+                optionsList.innerHTML = '';
+                const filter = search.value.toLowerCase();
+                items.filter(i => i.toLowerCase().includes(filter)).forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = `option-item ${state[stateKey].has(item) ? 'selected' : ''}`;
+                    div.innerHTML = `<div class="checkbox"></div><span>${item}</span>`;
+                    div.onclick = (e) => {
+                        e.stopPropagation();
+                        if (state[stateKey].has(item)) state[stateKey].delete(item);
+                        else state[stateKey].add(item);
+                        render();
+                    };
+                    optionsList.appendChild(div);
+                });
+            };
+
+            trigger.onclick = () => {
+                const isOpen = dropdown.classList.contains('show');
+                document.querySelectorAll('.dropdown-menu').forEach(d => d.classList.remove('show'));
+                if (!isOpen) {
+                    dropdown.classList.add('show');
+                    search.focus();
+                }
+            };
+
+            search.oninput = render;
+            document.addEventListener('click', (e) => { if (!container.contains(e.target)) dropdown.classList.remove('show'); });
+            render();
+        }
+
+        function getPayload() {
+            return {
+                SEARCH_QUERY: document.getElementById('SEARCH_QUERY').value,
+                SEARCH_LIMIT: document.getElementById('SEARCH_LIMIT').value,
+                SEARCH_AGENCY: Array.from(state.agency).join('|'),
+                SEARCH_SUBJECT: Array.from(state.subject).join('|'),
+                SEARCH_REPORT_TYPE: Array.from(state.report).join('|'),
+                SEARCH_FISCAL_YEAR: Array.from(state.year).join('|'),
+                SEARCH_BOROUGH: Array.from(state.borough).join('|')
+            };
+        }
+
+        function showToast(message, type = 'success') {
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                container.className = 'toast-container';
+                document.body.appendChild(container);
+            }
+            
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            const icon = type === 'success' 
+                ? '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>'
+                : '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
+                
+            toast.innerHTML = `${icon}<span>${message}</span>`;
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.animation = 'fadeOut 0.3s ease forwards';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        async function submitSaveConnector() {
+            const name = document.getElementById('connector_name').value.trim();
+            if (!name) {
+                showToast("Please provide a name.", "error");
+                return;
+            }
+            
+            const desc = document.getElementById('connector_desc').value;
+            
+            // Re-save config to .env just in case it's in a dirty state locally
+            await fetch('/api/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(getPayload())
+            });
+
+            // Save the connector map
+            const payload = {
+                name: name,
+                description: desc,
+                filters: getPayload()
+            };
+            
+            // Check url for ID if we are updating
+            const params = new URLSearchParams(window.location.search);
+            if(params.has("id")) {
+                payload.id = params.get("id");
+            }
+            
+            try {
+                const resp = await fetch('/api/connectors/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await resp.json();
+                
+                // update URL to map to this connector ID so future saves overwrite it
+                window.history.replaceState({}, '', `/explorer?id=${data.id}`);
+                
+                closeSaveModal();
+                showToast("Connector saved successfully!", "success");
+            } catch (e) {
+                showToast("Failed to save connector: " + e.message, "error");
+            }
+        }
+
+        function openSaveModal() {
+            document.getElementById('save-modal-overlay').style.display = 'flex';
+        }
+        
+        function closeSaveModal() {
+            document.getElementById('save-modal-overlay').style.display = 'none';
+        }
+
+        async function saveConfig() {
+            // Internal function used before download
+            await fetch('/api/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(getPayload())
+            });
+        }
+
+        async function runSearch() {
+            const btn = document.getElementById('btn-search');
+            const orig = btn.innerHTML;
+            btn.innerHTML = 'Searching...';
+            btn.disabled = true;
+
+            try {
+                const resp = await fetch('/api/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(getPayload())
+                });
+                const data = await resp.json();
+                displayResults(data);
+            } catch (e) {
+                showToast("Search failed: " + e.message, "error");
+            }
+
+            btn.innerHTML = orig;
+            btn.disabled = false;
+        }
+
+        function displayResults(data) {
+            const section = document.getElementById('results-section');
+            const thead = document.querySelector('table thead');
+            const body = document.getElementById('results-body');
+            const count = document.getElementById('results-count');
+            const downloadBtn = document.getElementById('btn-download');
+            const results = data.results || [];
+
+            body.innerHTML = '';
+            count.textContent = `Showing ${results.length} of ${data.total_count || 0} total results`;
+            
+            downloadBtn.style.display = 'inline-flex';
+            downloadBtn.innerHTML = `<svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg> Download (${results.length})`;
+            thead.innerHTML = `
+                <tr>
+                    <th>ID</th>
+                    <th>Title</th>
+                    <th>Agency</th>
+                    <th>Date</th>
+                    <th>Action</th>
+                </tr>
+            `;
+
+            results.forEach(r => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-family: monospace; color: var(--accent-primary);">${r.id}</td>
+                    <td style="font-weight: 500;">${r.title}</td>
+                    <td style="color: var(--text-secondary); font-size: 13px;">${r.agency}</td>
+                    <td style="color: var(--text-secondary); font-size: 13px;">${r.date ? r.date.split('T')[0] : ''}</td>
+                    <td><button class="btn-primary" style="padding: 6px 12px; font-size: 12px;" onclick="runIngest('${r.id}')">Download</button></td>
+                `;
+                body.appendChild(tr);
+            });
+            section.style.display = 'block';
+        }
+
+        async function runDownload() {
+            await saveConfig();
+            updateStatus("Starting Bulk Download...", "running");
+            document.getElementById('log-container').style.display = 'block';
+
+            await fetch('/api/run', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: null })
+            });
+            pollStatus();
+        }
+
+        async function runIngest(id) {
+            await fetch('/api/run', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id })
+            });
+            document.getElementById('log-container').style.display = 'block';
+            pollStatus();
+        }
+
+        function toggleLogs() {
+            const l = document.getElementById('log-container');
+            l.style.display = l.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function updateStatus(text, type) {
+            const area = document.getElementById('status-area');
+            const sText = document.getElementById('status-text');
+            const sIcon = document.getElementById('status-icon');
+            area.style.display = 'block';
+            area.className = type === 'running' ? 'status-running' : 'status-completed';
+            sText.textContent = text;
+            sIcon.innerHTML = type === 'running' ? '<svg class="animate-spin" style="animation:spin 1s linear infinite; margin-right:8px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" width="18" height="18"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>' : '<svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+        }
+
+        async function pollStatus() {
+            const resp = await fetch('/api/status');
+            const data = await resp.json();
+            if (data.status === 'running') {
+                updateStatus("Downloading...", "running");
+                setTimeout(pollStatus, 2000);
+            } else if (data.status === 'completed') {
+                updateStatus("Completed", "completed");
+            }
+        }
+
+        async function pollLogs() {
+            const resp = await fetch('/api/logs');
+            const data = await resp.json();
+            const box = document.getElementById('log-box');
+            if (data.logs.length > 0) {
+                box.innerText = data.logs.join('\n');
+                box.scrollTop = box.scrollHeight;
+            }
+            setTimeout(pollLogs, 1000);
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

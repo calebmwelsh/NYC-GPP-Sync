@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPP Connectors</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #4c1d95 100%);
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-secondary: #d8b4fe;
+            --accent-primary: #a855f7;
+            --accent-hover: #9333ea;
+            --accent-glow: rgba(168, 85, 247, 0.5);
+            --danger: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            margin: 0;
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+
+        .header-wrapper {
+            max-width: 1200px;
+            margin: 0 auto 40px auto;
+            text-align: center;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        h1 {
+            font-size: 36px;
+            font-weight: 700;
+            margin: 0 0 10px 0;
+            letter-spacing: -1px;
+            text-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 16px;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.5;
+        }
+
+        .connectors-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 24px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .connector-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative;
+            overflow: hidden;
+            animation: fadeIn 0.6s ease-out backwards;
+        }
+
+        .connector-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .connector-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(168, 85, 247, 0.15);
+            border-color: rgba(168, 85, 247, 0.4);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+            z-index: 2;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0;
+            color: var(--text-main);
+        }
+
+        .card-desc {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin: 0 0 16px 0;
+            line-height: 1.4;
+            flex-grow: 1;
+            z-index: 2;
+        }
+
+        .card-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 24px;
+            z-index: 2;
+        }
+
+        .tag {
+            background: rgba(168, 85, 247, 0.15);
+            color: #d8b4fe;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+
+        .tag-gray {
+            background: rgba(255, 255, 255, 0.05);
+            color: #94a3b8;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: auto;
+            z-index: 2;
+        }
+
+        button {
+            border: none;
+            border-radius: 10px;
+            padding: 10px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-hover));
+            color: white;
+            flex-grow: 1;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.1);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fef2f2;
+        }
+
+        /* Create New Card */
+        .card-new {
+            background: rgba(15, 23, 42, 0.4);
+            border: 2px dashed rgba(216, 180, 254, 0.3);
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            text-decoration: none;
+            min-height: 220px;
+        }
+
+        .card-new:hover {
+            background: rgba(15, 23, 42, 0.6);
+            border-color: var(--accent-primary);
+        }
+
+        .card-new svg {
+            width: 48px;
+            height: 48px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            transition: color 0.2s, transform 0.2s;
+        }
+
+        .card-new:hover svg {
+            color: var(--accent-primary);
+            transform: scale(1.1);
+        }
+
+        .card-new span {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .card-new:hover span {
+            color: var(--text-main);
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 9999;
+        }
+
+        .toast {
+            min-width: 250px;
+            padding: 16px 20px;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            animation: slideInRight 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+        }
+
+        .toast.success { background: rgba(16, 185, 129, 0.9); border: 1px solid rgba(16, 185, 129, 1); }
+        .toast.error { background: rgba(239, 68, 68, 0.9); border: 1px solid rgba(239, 68, 68, 1); }
+
+        @keyframes slideInRight {
+            from { transform: translateX(110%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header-wrapper">
+        <h1>GPP Connectors</h1>
+        <div class="subtitle">Select a saved workspace or create a new one to explore NYC Government Publications with preset filters.</div>
+    </div>
+
+    <div class="connectors-grid" id="connectors-grid">
+        <!-- New Connector Card -->
+        <a href="/explorer" class="connector-card card-new">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            <span>Create New Connector</span>
+        </a>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div id="confirm-modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background: var(--card-bg); padding: 30px; border-radius: 16px; width: 400px; border: 1px solid var(--card-border); box-shadow: 0 20px 40px rgba(0,0,0,0.6); text-align: center;">
+            <h2 style="margin-top: 0; font-size: 20px; color: var(--text-main);">Confirm Deletion</h2>
+            <p style="color: var(--text-secondary); font-size: 15px; margin-bottom: 24px;">Are you sure you want to delete this connector? This action cannot be undone.</p>
+            <div style="display: flex; gap: 12px; justify-content: center;">
+                <button style="background: transparent; border: 1px solid var(--card-border); color: var(--text-secondary);" onclick="closeConfirmModal()">Cancel</button>
+                <button class="btn-danger" id="confirm-btn">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', loadConnectors);
+
+        async function loadConnectors() {
+            try {
+                const resp = await fetch('/api/connectors');
+                const connectors = await resp.json();
+                
+                const grid = document.getElementById('connectors-grid');
+                // Keep the "New Connector" button
+                const newCard = grid.querySelector('.card-new');
+                grid.innerHTML = '';
+                grid.appendChild(newCard);
+
+                // Add animations stagger
+                let delay = 1;
+
+                for (const [id, config] of Object.entries(connectors)) {
+                    const card = document.createElement('div');
+                    card.className = 'connector-card';
+                    card.style.animationDelay = `${delay * 0.1}s`;
+                    delay++;
+
+                    let tagsHtml = '';
+                    let tagCount = 0;
+                    
+                    const filters = config.filters || {};
+                    // Create specific tags for non-empty filters
+                    if(filters.SEARCH_QUERY) { tagsHtml += `<div class="tag">"${filters.SEARCH_QUERY}"</div>`; tagCount++; }
+                    if(filters.SEARCH_AGENCY) { tagsHtml += `<div class="tag">${filters.SEARCH_AGENCY.split('|').length} Agencies</div>`; tagCount++; }
+                    if(filters.SEARCH_SUBJECT) { tagsHtml += `<div class="tag">${filters.SEARCH_SUBJECT.split('|').length} Subjects</div>`; tagCount++; }
+                    if(filters.SEARCH_REPORT_TYPE) { tagsHtml += `<div class="tag">${filters.SEARCH_REPORT_TYPE.split('|').length} Types</div>`; tagCount++; }
+                    if(filters.SEARCH_FISCAL_YEAR) { tagsHtml += `<div class="tag">${filters.SEARCH_FISCAL_YEAR.split('|').length} Years</div>`; tagCount++; }
+                    if(filters.SEARCH_BOROUGH) { tagsHtml += `<div class="tag">${filters.SEARCH_BOROUGH.split('|').length} Boroughs</div>`; tagCount++; }
+                    
+                    if(tagCount === 0) {
+                        tagsHtml = `<div class="tag tag-gray">No Active Filters</div>`;
+                    }
+
+                    card.innerHTML = `
+                        <div class="card-header">
+                            <h3 class="card-title">${config.name}</h3>
+                        </div>
+                        <p class="card-desc">${config.description || 'No description provided.'}</p>
+                        <div class="card-tags">
+                            ${tagsHtml}
+                        </div>
+                        <div class="card-actions">
+                            <button class="btn-danger" onclick="deleteConnector('${id}')" title="Delete">
+                                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                            <button class="btn-primary" onclick="launchConnector('${id}')">
+                                Launch Explorer
+                                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                            </button>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                }
+            } catch (e) {
+                console.error("Error loading connectors:", e);
+            }
+        }
+
+        async function launchConnector(id) {
+            try {
+                // Post to backend to load `.env` correctly
+                const resp = await fetch('/api/connectors/load', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({id: id})
+                });
+
+                if(resp.ok) {
+                    window.location.href = `/explorer?id=${id}`;
+                } else {
+                    showToast("Failed to load connector context.", "error");
+                }
+            } catch(e) {
+                showToast("Error launching connector: " + e.message, "error");
+            }
+        }
+
+        let resolveConfirm = null;
+        
+        function customConfirm() {
+            document.getElementById('confirm-modal-overlay').style.display = 'flex';
+            return new Promise((resolve) => {
+                resolveConfirm = resolve;
+            });
+        }
+        
+        function closeConfirmModal() {
+            document.getElementById('confirm-modal-overlay').style.display = 'none';
+            if (resolveConfirm) resolveConfirm(false);
+        }
+        
+        document.getElementById('confirm-btn').onclick = () => {
+            document.getElementById('confirm-modal-overlay').style.display = 'none';
+            if (resolveConfirm) resolveConfirm(true);
+        };
+
+        function showToast(message, type = 'success') {
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                container.className = 'toast-container';
+                document.body.appendChild(container);
+            }
+            
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            const icon = type === 'success' 
+                ? '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>'
+                : '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
+                
+            toast.innerHTML = `${icon}<span>${message}</span>`;
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.animation = 'fadeOut 0.3s ease forwards';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        async function deleteConnector(id) {
+            if(await customConfirm()) {
+                try {
+                    await fetch('/api/connectors/delete', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({id: id})
+                    });
+                    loadConnectors();
+                    showToast("Connector deleted.", "success");
+                } catch(e) {
+                    showToast("Error deleting connector: " + e.message, "error");
+                }
+            }
+        }
+    </script>
+</body>
+</html>

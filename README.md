@@ -24,6 +24,8 @@ NYC GPP/
 └── start.py            # Main entry point (launches UI)
 ```
 
+![GPP Explorer UI Dashboard](assets/Readme.png)
+
 ## Setup & Installation
 
 The project requires **Python 3.8+**.

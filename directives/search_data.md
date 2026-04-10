@@ -13,7 +13,7 @@ Query the GPP Hyrax catalog API with a keyword query and/or any combination of f
 - For any exploratory querying of the GPP catalog.
 
 ## Script
-`execution/search_data.py`
+`cli/search.py`
 
 ## Environment Variables (`.env/.env`)
 | Variable                 | Description                                      |
@@ -36,22 +36,22 @@ CLI args override env variables.
 
 **Basic keyword search:**
 ```bash
-python search_data.py --query "budget" --rows 20
+python cli/search.py --query "budget" --rows 20
 ```
 
 **With filters:**
 ```bash
-python search_data.py --agency "City Planning, Department of (DCP)" --fiscal-year "2024" --rows 50
+python cli/search.py --agency "City Planning, Department of (DCP)" --fiscal-year "2024" --rows 50
 ```
 
 **Fetch all results (auto-paginates):**
 ```bash
-python search_data.py --rows 9999
+python cli/search.py --rows 9999
 ```
 
 **Save to custom path:**
 ```bash
-python search_data.py --query "housing" --output .tmp/housing_results.json
+python cli/search.py --query "housing" --output .tmp/housing_results.json
 ```
 
 ## Outputs

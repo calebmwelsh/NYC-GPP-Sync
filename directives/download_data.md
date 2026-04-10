@@ -15,7 +15,7 @@ Given a GPP work ID, fetch its full metadata and download all associated files (
 - As a dependency called by `bulk_ingest.py` per-item.
 
 ## Script
-`execution/download_data.py`
+`cli/download.py`
 
 ## Inputs
 | Argument     | Required | Description                                        |
@@ -27,13 +27,12 @@ Work IDs come from `results.json` (run `search_data.py` first).
 
 ## How to Run
 ```bash
-cd execution
-python download_data.py --id <work-id>
+python cli/download.py --id <work-id>
 ```
 
 **Metadata only:**
 ```bash
-python download_data.py --id <work-id> --no-files
+python cli/download.py --id <work-id> --no-files
 ```
 
 ## How it Works (Endpoint Chain)

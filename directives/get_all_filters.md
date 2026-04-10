@@ -12,7 +12,7 @@ Pull every facet (filter category) and all of its values from the GPP Hyrax API 
 - Whenever a new facet might have been added to the portal.
 
 ## Script
-`execution/get_all_filters.py`
+`cli/get_filters.py`
 
 ## Inputs
 Environment variable (optional):
@@ -22,8 +22,7 @@ Set in `.env/.env` if needed.
 
 ## How to Run
 ```bash
-cd execution
-python get_all_filters.py
+python cli/get_filters.py
 ```
 
 ## Outputs

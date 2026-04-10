@@ -2,6 +2,8 @@
 
 A modular, robust, and easy-to-use crawler and UI for the NYC Government Publications Portal (GPP).
 
+![GPP Explorer UI Dashboard](assets/Readme.png)
+
 ## Features
 
 - **Robust Akamai Bypass**: Uses `curl_cffi` to mimic browser fingerprints and handle rate limiting.
@@ -23,8 +25,6 @@ NYC GPP/
 ├── .tmp/               # Local temp data & downloads
 └── start.py            # Main entry point (launches UI)
 ```
-
-![GPP Explorer UI Dashboard](assets/Readme.png)
 
 ## Setup & Installation
 

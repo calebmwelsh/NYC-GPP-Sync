@@ -65,6 +65,24 @@ def read_process_output(process):
     finally:
         process.stdout.close()
 
+def calculate_next_run(schedule, base_time):
+    unit = schedule.get("interval_unit", "hours")
+    value = int(schedule.get("interval_value", 24))
+    
+    if unit == "minutes":
+        next_run = base_time + timedelta(minutes=value)
+    elif unit == "hours":
+        next_run = base_time + timedelta(hours=value)
+    elif unit == "days":
+        next_run = base_time + timedelta(days=value)
+    elif unit == "months":
+        # Rough approximation: 30 days
+        next_run = base_time + timedelta(days=value * 30)
+    else:
+        next_run = base_time + timedelta(hours=value)
+        
+    schedule["next_run"] = next_run.isoformat()
+
 class NativeScheduler:
     """Background engine that triggers scheduled syncs."""
     def __init__(self, connectors_path, schedule_script_path):
@@ -99,7 +117,7 @@ class NativeScheduler:
             next_run_str = schedule.get("next_run")
             if not next_run_str:
                 # Initialize next run if missing
-                self.update_schedule(schedule, now)
+                calculate_next_run(schedule, now)
                 updated = True
                 continue
 
@@ -113,17 +131,12 @@ class NativeScheduler:
                 
                 # Update last and next run
                 schedule["last_run"] = now.isoformat()
-                self.update_schedule(schedule, now)
+                calculate_next_run(schedule, now)
                 updated = True
 
         if updated:
             with open(self.connectors_path, 'w', encoding='utf-8') as f:
                 json.dump(connectors, f, indent=2)
-
-    def update_schedule(self, schedule, base_time):
-        interval_hours = int(schedule.get("interval_hours", 24))
-        next_run = base_time + timedelta(hours=interval_hours)
-        schedule["next_run"] = next_run.isoformat()
 
 class GPPRequestHandler(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
@@ -296,7 +309,8 @@ class GPPRequestHandler(http.server.SimpleHTTPRequestHandler):
     def handle_save_schedule(self, data):
         c_id = data.get("id")
         enabled = data.get("enabled", False)
-        interval_hours = data.get("interval_hours", 24)
+        interval_unit = data.get("interval_unit", "hours")
+        interval_value = data.get("interval_value", 24)
         
         connectors = self.read_connectors()
         if c_id not in connectors:
@@ -305,13 +319,14 @@ class GPPRequestHandler(http.server.SimpleHTTPRequestHandler):
             
         schedule = connectors[c_id].get("schedule", {})
         schedule["enabled"] = enabled
-        schedule["interval_hours"] = interval_hours
+        schedule["interval_unit"] = interval_unit
+        schedule["interval_value"] = interval_value
         
         # If enabled and no next run, set it
-        if enabled and not schedule.get("next_run"):
-            next_run = datetime.now() + timedelta(hours=int(interval_hours))
-            schedule["next_run"] = next_run.isoformat()
-        elif not enabled:
+        if enabled:
+            # We always recalculate next run on save to ensure it respects new settings
+            calculate_next_run(schedule, datetime.now())
+        else:
             schedule["next_run"] = None
             
         connectors[c_id]["schedule"] = schedule

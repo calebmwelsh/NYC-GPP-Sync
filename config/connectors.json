@@ -14,7 +14,9 @@
     "schedule": {
       "enabled": true,
       "interval_hours": "1",
-      "next_run": "2026-04-24T13:24:05.591685"
+      "next_run": "2026-04-24T12:42:51.362708",
+      "interval_unit": "minutes",
+      "interval_value": "5"
     }
   },
   "42da3f557da24e11b20991c531fba2d4": {

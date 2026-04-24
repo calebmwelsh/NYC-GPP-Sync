@@ -456,12 +456,17 @@
                 </div>
                 
                 <div id="native-schedule-options" style="display: none;">
-                    <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
                         <span style="font-size: 14px; color: var(--text-secondary);">Run every</span>
-                        <input type="number" id="schedule-interval" value="24" min="1" style="width: 70px; background: rgba(0,0,0,0.3); border: 1px solid var(--card-border); border-radius: 8px; color: white; padding: 8px; text-align: center;">
-                        <span style="font-size: 14px; color: var(--text-secondary);">hours</span>
+                        <input type="number" id="schedule-value" value="24" min="1" style="width: 70px; background: rgba(0,0,0,0.3); border: 1px solid var(--card-border); border-radius: 8px; color: white; padding: 8px; text-align: center;">
+                        <select id="schedule-unit" style="background: rgba(0,0,0,0.3); border: 1px solid var(--card-border); border-radius: 8px; color: white; padding: 8px; flex-grow: 1;">
+                            <option value="minutes">Minutes</option>
+                            <option value="hours" selected>Hours</option>
+                            <option value="days">Days</option>
+                            <option value="months">Months</option>
+                        </select>
                     </div>
-                    <div id="schedule-status-text" style="margin-top: 12px; font-size: 12px; color: #a855f7;"></div>
+                    <div id="schedule-status-text" style="font-size: 12px; color: #a855f7;"></div>
                 </div>
                 <button class="btn-primary" onclick="saveNativeSchedule()" style="width: 100%; margin-top: 16px; font-size: 13px;">Save Schedule Settings</button>
             </div>
@@ -647,7 +652,8 @@
                 const config = connectors[id];
                 if(config && config.schedule) {
                     document.getElementById('native-schedule-enabled').checked = config.schedule.enabled;
-                    document.getElementById('schedule-interval').value = config.schedule.interval_hours || 24;
+                    document.getElementById('schedule-value').value = config.schedule.interval_value || 24;
+                    document.getElementById('schedule-unit').value = config.schedule.interval_unit || 'hours';
                     document.getElementById('native-schedule-options').style.display = config.schedule.enabled ? 'block' : 'none';
                     
                     if(config.schedule.next_run) {
@@ -672,7 +678,8 @@
 
         async function saveNativeSchedule() {
             const enabled = document.getElementById('native-schedule-enabled').checked;
-            const interval = document.getElementById('schedule-interval').value;
+            const value = document.getElementById('schedule-value').value;
+            const unit = document.getElementById('schedule-unit').value;
             
             try {
                 const resp = await fetch('/api/connectors/schedule', {
@@ -681,7 +688,8 @@
                     body: JSON.stringify({
                         id: currentConnectorId,
                         enabled: enabled,
-                        interval_hours: interval
+                        interval_value: value,
+                        interval_unit: unit
                     })
                 });
                 

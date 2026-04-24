@@ -16,7 +16,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # Use .tmp/downloads for cleaner root
-DOWNLOAD_DIR = os.path.join(PROJECT_ROOT, ".tmp", "downloads")
+DOWNLOAD_DIR = os.path.join(PROJECT_ROOT, "data", "downloads")
 
 def sanitize_filename(name: str) -> str:
     """Sanitize string to be safe for filenames."""

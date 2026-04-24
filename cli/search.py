@@ -176,7 +176,7 @@ def main():
         tmp_dir = os.path.join(PROJECT_ROOT, ".tmp")
         os.makedirs(tmp_dir, exist_ok=True)
         
-        output_path = args.output or os.path.join(tmp_dir, "results.json")
+        output_path = args.output or os.path.join(PROJECT_ROOT, "data", "results.json")
         with open(output_path, "w", encoding="utf-8") as f:
             output_data = search_data
             output_data["results"] = all_results

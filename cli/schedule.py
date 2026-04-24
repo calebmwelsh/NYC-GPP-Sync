@@ -20,7 +20,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-CONNECTORS_PATH = os.path.join(PROJECT_ROOT, "config", "connectors.json")
+CONNECTORS_PATH = os.path.join(PROJECT_ROOT, "data", "connectors.json")
 SEARCH_SCRIPT = os.path.join(PROJECT_ROOT, "cli", "search.py")
 BULK_SCRIPT = os.path.join(PROJECT_ROOT, "cli", "bulk_ingest.py")
 

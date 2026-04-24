@@ -5,10 +5,10 @@ description: Search the GPP catalog with optional keyword queries and facet filt
 # Directive: Search Data (`search_data.py`)
 
 ## Goal
-Query the GPP Hyrax catalog API with a keyword query and/or any combination of facet filters. Saves paginated results to `.tmp/results.json` for downstream use (e.g., bulk ingest).
+Query the GPP Hyrax catalog API with a keyword query and/or any combination of facet filters. Saves paginated results to `data/results.json` for downstream use (e.g., bulk ingest).
 
 ## When to Use
-- Before running `bulk_ingest.py` — search first to populate `.tmp/results.json`.
+- Before running `bulk_ingest.py` — search first to populate `data/results.json`.
 - For filter parity testing (compare result counts against the live portal UI).
 - For any exploratory querying of the GPP catalog.
 
@@ -51,11 +51,11 @@ python cli/search.py --rows 9999
 
 **Save to custom path:**
 ```bash
-python cli/search.py --query "housing" --output .tmp/housing_results.json
+python cli/search.py --query "housing" --output data/housing_results.json
 ```
 
 ## Outputs
-- `.tmp/results.json` (default) with structure:
+- `data/results.json` (default) with structure:
   ```json
   {
     "results": [{ "id": "...", "title": "...", "agency": "...", "date": "...", "type": "..." }],

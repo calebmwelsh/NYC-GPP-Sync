@@ -12,7 +12,7 @@ sys.path.append(PROJECT_ROOT)
 from core.hyrax_client import HyraxClient
 from cli.download import download_work
 
-RESULTS_PATH = os.path.join(PROJECT_ROOT, ".tmp", "results.json")
+RESULTS_PATH = os.path.join(PROJECT_ROOT, "data", "results.json")
 
 def process_item(work_id):
     """Helper for ThreadPoolExecutor with shared client."""

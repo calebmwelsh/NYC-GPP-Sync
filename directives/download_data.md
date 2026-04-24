@@ -23,7 +23,7 @@ Given a GPP work ID, fetch its full metadata and download all associated files (
 | `--id`       | ✅        | The Work ID (Hyrax UUID) to download               |
 | `--no-files` | ❌        | If set, only fetches metadata; skips file download |
 
-Work IDs come from `results.json` (run `search_data.py` first).
+Work IDs come from `data/results.json` (run `search_data.py` first).
 
 ## How to Run
 ```bash
@@ -44,7 +44,7 @@ python cli/download.py --id <work-id> --no-files
    - **GET** `/downloads/:fileSetId` → stream file bytes
 
 ## Outputs
-All outputs land in `~/Downloads/GPP_Downloads/:workId/`:
+All outputs land in `data/downloads/:workId/`:
 - `metadata.json` — full Solr document for the work
 - `<filename>.pdf` (or resolved name) — the downloaded file(s)
 

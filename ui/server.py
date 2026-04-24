@@ -25,8 +25,8 @@ from core.hyrax_client import HyraxClient
 # Configuration
 PORT = 8004
 ENV_PATH = os.path.join(PROJECT_ROOT, '.env', '.env')
-FILTERS_JSON_PATH = os.path.join(PROJECT_ROOT, '.tmp', 'gpp_filters.json')
-CONNECTORS_PATH = os.path.join(PROJECT_ROOT, 'config', 'connectors.json')
+FILTERS_JSON_PATH = os.path.join(PROJECT_ROOT, 'data', 'filters.json')
+CONNECTORS_PATH = os.path.join(PROJECT_ROOT, 'data', 'connectors.json')
 DOWNLOAD_SCRIPT_PATH = os.path.join(PROJECT_ROOT, 'cli', 'download.py')
 SEARCH_SCRIPT_PATH = os.path.join(PROJECT_ROOT, 'cli', 'search.py')
 BULK_SCRIPT_PATH = os.path.join(PROJECT_ROOT, 'cli', 'bulk_ingest.py')
@@ -680,6 +680,7 @@ if __name__ == "__main__":
     os.makedirs(TEMPLATE_DIR, exist_ok=True)
     os.makedirs(os.path.join(PROJECT_ROOT, '.env'), exist_ok=True)
     os.makedirs(os.path.join(PROJECT_ROOT, '.tmp'), exist_ok=True)
+    os.makedirs(os.path.join(PROJECT_ROOT, 'data', 'downloads'), exist_ok=True)
     
     if not os.path.exists(ENV_PATH):
         with open(ENV_PATH, 'w', encoding='utf-8') as f:

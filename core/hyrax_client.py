@@ -30,17 +30,61 @@ class HyraxClient:
         self.session = requests.Session()
         self.impersonate = "safari" # Switched from chrome as safari seems more resilient for Akamai
         
-        # Leaner headers to avoid fingerprinting issues
+        # Base headers
         self.headers = {
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
             "Accept-Language": "en-US,en;q=0.9",
             "Accept-Encoding": "gzip, deflate, br",
             "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "none",
+            "Sec-Fetch-User": "?1"
         }
+        
+        self.user_agents = [
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+        ]
         
         self.request_delay = float(os.getenv("GPP_REQUEST_DELAY", "1.5"))
         self.initialized = False
+        self.consecutive_403s = 0
+        self.requests_since_init = 0
+        self.cool_down_until = 0 # Request index to cool down until
+
+    def reset_session(self):
+        """Reset the session and cookies to clear any Akamai flags."""
+        logger.warning("Resetting session due to persistent 403 errors...")
+        self.session = requests.Session()
+        self.initialized = False
+        self.consecutive_403s = 0
+        self.requests_since_init = 0
+        self._initialize_session()
+
+    def _get_random_headers(self) -> Dict[str, str]:
+        """Generate randomized headers to avoid fingerprinting."""
+        headers = self.headers.copy()
+        headers["User-Agent"] = random.choice(self.user_agents)
+        
+        # Randomize Accept-Language slightly
+        languages = ["en-US,en;q=0.9", "en-US,en;q=0.8", "en-GB,en;q=0.9,en-US;q=0.8"]
+        headers["Accept-Language"] = random.choice(languages)
+        
+        return headers
+
+    def _simulate_human_navigation(self):
+        """Occasionally visit the root or facets to maintain a natural traffic profile."""
+        if self.requests_since_init > 0 and self.requests_since_init % 10 == 0:
+            logger.info("Simulating human navigation (refreshing session footprint)...")
+            try:
+                self.session.get(f"{self.base_url}/", headers=self._get_random_headers(), impersonate=self.impersonate, timeout=15)
+                time.sleep(random.uniform(2, 5))
+            except Exception as e:
+                logger.debug(f"Human navigation simulation failed: {e}")
 
     def _initialize_session(self):
         """Perform a 'first visit' to the home page to get cookies and establish a session footprint."""
@@ -52,37 +96,47 @@ class HyraxClient:
             # Akamai requires a clean impersonated visit to the root
             resp = self.session.get(
                 f"{self.base_url}/", 
-                headers=self.headers, 
+                headers=self._get_random_headers(), 
                 impersonate=self.impersonate,
                 timeout=30
             )
             resp.raise_for_status()
-            logger.info(f"Session initialized (Status {resp.status_code}). Cookies: {self.session.cookies.get_dict().keys()}")
+            logger.info(f"Session initialized (Status {resp.status_code}). Cookies: {list(self.session.cookies.get_dict().keys())}")
             self.initialized = True
         except Exception as e:
             logger.error(f"Failed to initialize session: {e}")
-            # We don't raise here as subsequent requests might still work or will fail naturally
 
     def request(self, method: str, path: str, **kwargs) -> requests.Response:
         """Perform a request with retries and exponential backoff."""
         if not self.initialized:
             self._initialize_session()
 
+        # Human-like break
+        self._simulate_human_navigation()
+        self.requests_since_init += 1
+
         url = f"{self.base_url}/{path.lstrip('/')}" if not path.startswith("http") else path
         
-        # Merge headers
-        headers = self.headers.copy()
-        if "headers" in kwargs:
-            headers.update(kwargs.pop("headers"))
-            
         max_retries = 3
-        backoff_factor = 3 # Increased from 2
+        backoff_factor = 4
         
         for attempt in range(max_retries):
-            # Add randomized delay to mimic human behavior
-            current_delay = self.request_delay + random.uniform(0.5, 2.0)
+            # Dynamic headers for each attempt
+            headers = self._get_random_headers()
+            if "headers" in kwargs:
+                headers.update(kwargs["headers"])
+            
+            # Jitter: base delay + random + exponential part
+            current_delay = self.request_delay + random.uniform(0.5, 2.5)
+            
+            # Apply cool-down if recently hit 403
+            if self.requests_since_init < self.cool_down_until:
+                cool_down_extra = random.uniform(3, 8)
+                logger.debug(f"Applying cool-down delay (+{cool_down_extra:.2f}s)...")
+                current_delay += cool_down_extra
+
             if attempt > 0:
-                current_delay *= (backoff_factor ** attempt)
+                current_delay += (backoff_factor ** attempt) + random.uniform(2, 5)
             
             logger.debug(f"Waiting {current_delay:.2f}s before request...")
             time.sleep(current_delay)
@@ -90,46 +144,49 @@ class HyraxClient:
             try:
                 logger.debug(f"Requesting {url} (Attempt {attempt + 1})")
                 
-                # Use session.get/request directly with impersonate
-                # curl_cffi Session works best when using the direct methods
+                request_kwargs = kwargs.copy()
+                if "headers" in request_kwargs:
+                    del request_kwargs["headers"]
+
                 if method.upper() == "GET":
-                    response = self.session.get(
-                        url, 
-                        headers=headers, 
-                        impersonate=self.impersonate,
-                        **kwargs
-                    )
+                    response = self.session.get(url, headers=headers, impersonate=self.impersonate, **request_kwargs)
                 else:
-                    response = self.session.request(
-                        method,
-                        url,
-                        headers=headers,
-                        impersonate=self.impersonate,
-                        **kwargs
-                    )
+                    response = self.session.request(method, url, headers=headers, impersonate=self.impersonate, **request_kwargs)
                 
                 # Handle rate limiting (429)
                 if response.status_code == 429:
-                    retry_after = int(response.headers.get("Retry-After", 10))
-                    wait_time = retry_after + (backoff_factor ** attempt) + random.uniform(0, 1)
+                    retry_after = int(response.headers.get("Retry-After", 15))
+                    wait_time = retry_after + (backoff_factor ** attempt) + random.uniform(5, 10)
                     logger.warning(f"Rate limited (429). Waiting {wait_time:.2f}s...")
                     time.sleep(wait_time)
                     continue
                 
                 if response.status_code == 403:
-                    logger.error(f"403 Access Denied for {url}")
+                    self.consecutive_403s += 1
+                    logger.error(f"403 Access Denied for {url} (Consecutive: {self.consecutive_403s})")
+                    
+                    # Schedule cool-down for next few requests
+                    self.cool_down_until = self.requests_since_init + 5
+                    
+                    if self.consecutive_403s >= 2:
+                        self.reset_session()
+                        continue
+
                     if attempt < max_retries - 1:
-                        wait_time = (backoff_factor ** attempt) + random.uniform(1, 3)
+                        wait_time = (backoff_factor ** attempt) + random.uniform(3, 7)
                         logger.info(f"Retrying in {wait_time:.2f}s...")
                         time.sleep(wait_time)
                         continue
                 
+                if response.status_code < 400:
+                    self.consecutive_403s = 0
+                    
                 return response
                 
             except Exception as e:
                 logger.error(f"Request error for {url}: {e}")
                 if attempt < max_retries - 1:
-                    wait_time = (backoff_factor ** attempt) + random.uniform(1, 3)
+                    wait_time = (backoff_factor ** attempt) + random.uniform(2, 5)
                     time.sleep(wait_time)
                 else:
                     raise

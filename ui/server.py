@@ -8,7 +8,9 @@ import sys
 import threading
 import time
 import uuid
+import sys
 from datetime import datetime, timedelta
+from croniter import croniter
 from curl_cffi import requests
 from urllib.parse import parse_qs, urlparse
 
@@ -66,22 +68,14 @@ def read_process_output(process):
         process.stdout.close()
 
 def calculate_next_run(schedule, base_time):
-    unit = schedule.get("interval_unit", "hours")
-    value = int(schedule.get("interval_value", 24))
-    
-    if unit == "minutes":
-        next_run = base_time + timedelta(minutes=value)
-    elif unit == "hours":
-        next_run = base_time + timedelta(hours=value)
-    elif unit == "days":
-        next_run = base_time + timedelta(days=value)
-    elif unit == "months":
-        # Rough approximation: 30 days
-        next_run = base_time + timedelta(days=value * 30)
-    else:
-        next_run = base_time + timedelta(hours=value)
-        
-    schedule["next_run"] = next_run.isoformat()
+    cron_expr = schedule.get("cron_expression", "0 0 * * *") # Default to daily midnight
+    try:
+        iter = croniter(cron_expr, base_time)
+        next_run = iter.get_next(datetime)
+        schedule["next_run"] = next_run.isoformat()
+    except Exception as e:
+        logger.error(f"Error calculating next run for cron '{cron_expr}': {e}")
+        schedule["next_run"] = None
 
 class NativeScheduler:
     """Background engine that triggers scheduled syncs."""
@@ -309,8 +303,7 @@ class GPPRequestHandler(http.server.SimpleHTTPRequestHandler):
     def handle_save_schedule(self, data):
         c_id = data.get("id")
         enabled = data.get("enabled", False)
-        interval_unit = data.get("interval_unit", "hours")
-        interval_value = data.get("interval_value", 24)
+        cron_expression = data.get("cron_expression", "0 0 * * *")
         
         connectors = self.read_connectors()
         if c_id not in connectors:
@@ -319,12 +312,10 @@ class GPPRequestHandler(http.server.SimpleHTTPRequestHandler):
             
         schedule = connectors[c_id].get("schedule", {})
         schedule["enabled"] = enabled
-        schedule["interval_unit"] = interval_unit
-        schedule["interval_value"] = interval_value
+        schedule["cron_expression"] = cron_expression
         
-        # If enabled and no next run, set it
+        # If enabled, calculate next run
         if enabled:
-            # We always recalculate next run on save to ensure it respects new settings
             calculate_next_run(schedule, datetime.now())
         else:
             schedule["next_run"] = None

@@ -492,12 +492,18 @@
             border-radius: 12px;
             color: white;
             padding: 10px;
-            text-align: center;
             font-size: 14px;
-            font-weight: 600;
+            font-weight: 500;
             transition: all 0.3s ease;
             outline: none;
             min-height: 44px;
+        }
+
+        /* Remove arrows from number input */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
         }
 
         .interval-input:focus {
@@ -552,22 +558,29 @@
                 </div>
                 
                 <div id="native-schedule-options" style="display: none; animation: fadeIn 0.3s ease;">
-                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
-                        <span style="font-size: 14px; color: var(--text-secondary); font-weight: 500;">Run every</span>
-                        <input type="number" id="schedule-value" value="24" min="1" class="interval-input">
-                        <div class="custom-select-wrapper" style="position: relative; flex-grow: 1;">
-                            <div class="custom-select-trigger" id="schedule-unit-trigger" onclick="toggleScheduleUnitDropdown()">
-                                <span id="schedule-unit-label">Hours</span>
+                    <div style="margin-bottom: 16px;">
+                        <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; font-weight: 500;">Schedule Preset</div>
+                        <div class="custom-select-wrapper" style="position: relative;">
+                            <div class="custom-select-trigger" id="cron-preset-trigger" onclick="toggleCronPresetDropdown()">
+                                <span id="cron-preset-label">Custom Expression</span>
                             </div>
-                            <div class="custom-dropdown-menu" id="schedule-unit-menu">
-                                <div class="custom-option" onclick="selectScheduleUnit('minutes')">Minutes</div>
-                                <div class="custom-option selected" onclick="selectScheduleUnit('hours')">Hours</div>
-                                <div class="custom-option" onclick="selectScheduleUnit('days')">Days</div>
-                                <div class="custom-option" onclick="selectScheduleUnit('months')">Months</div>
+                            <div class="custom-dropdown-menu" id="cron-preset-menu">
+                                <div class="custom-option" onclick="setCronPreset('*/5 * * * *', 'Every 5 Minutes')">Every 5 Minutes</div>
+                                <div class="custom-option" onclick="setCronPreset('0 * * * *', 'Every Hour')">Every Hour</div>
+                                <div class="custom-option" onclick="setCronPreset('0 0 * * *', 'Daily at Midnight')">Daily at Midnight</div>
+                                <div class="custom-option" onclick="setCronPreset('0 0 * * 1', 'Every Monday')">Every Monday</div>
+                                <div class="custom-option" onclick="setCronPreset('0 0 1 * *', '1st of Every Month')">1st of Every Month</div>
+                                <div class="custom-option selected" onclick="setCronPreset('', 'Custom Expression')">Custom Expression</div>
                             </div>
-                            <input type="hidden" id="schedule-unit" value="hours">
                         </div>
                     </div>
+
+                    <div style="margin-bottom: 16px;">
+                        <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; font-weight: 500;">Cron Expression</div>
+                        <input type="text" id="cron-expression" placeholder="e.g. 0 0 1 * *" class="interval-input" style="width: 100%; text-align: left; padding-left: 16px;">
+                        <div style="font-size: 11px; color: var(--text-secondary); margin-top: 6px;">Format: min hour day month weekday</div>
+                    </div>
+
                     <div id="schedule-status-text" style="font-size: 12px; color: #a855f7; font-weight: 500; display: flex; align-items: center; gap: 6px;">
                         <span style="display: inline-block; width: 6px; height: 6px; background: #a855f7; border-radius: 50%; box-shadow: 0 0 8px #a855f7;"></span>
                         <span id="next-run-display"></span>
@@ -668,42 +681,38 @@
 
         // Global click listener to close dropdowns
         document.addEventListener('click', (e) => {
-            const menu = document.getElementById('schedule-unit-menu');
-            const trigger = document.getElementById('schedule-unit-trigger');
-            if (menu && !trigger.contains(e.target) && !menu.contains(e.target)) {
+            const menu = document.getElementById('cron-preset-menu');
+            const trigger = document.getElementById('cron-preset-trigger');
+            if (menu && trigger && !trigger.contains(e.target) && !menu.contains(e.target)) {
                 menu.classList.remove('show');
                 trigger.classList.remove('active');
             }
         });
 
-        function toggleScheduleUnitDropdown() {
-            const menu = document.getElementById('schedule-unit-menu');
-            const trigger = document.getElementById('schedule-unit-trigger');
+        function toggleCronPresetDropdown() {
+            const menu = document.getElementById('cron-preset-menu');
+            const trigger = document.getElementById('cron-preset-trigger');
             menu.classList.toggle('show');
             trigger.classList.toggle('active');
         }
 
-        function selectScheduleUnit(val) {
-            const label = val.charAt(0).toUpperCase() + val.slice(1);
-            document.getElementById('schedule-unit-label').innerText = label;
-            document.getElementById('schedule-unit').value = val;
+        function setCronPreset(expr, label) {
+            document.getElementById('cron-preset-label').innerText = label;
+            if (expr) {
+                document.getElementById('cron-expression').value = expr;
+            }
             
             // Update selected class
-            const options = document.querySelectorAll('.custom-option');
+            const options = document.querySelectorAll('#cron-preset-menu .custom-option');
             options.forEach(opt => {
-                if (opt.innerText.toLowerCase() === val) {
+                if (opt.innerText === label) {
                     opt.classList.add('selected');
                 } else {
                     opt.classList.remove('selected');
                 }
             });
             
-            const menu = document.getElementById('schedule-unit-menu');
-            const trigger = document.getElementById('schedule-unit-trigger');
-            if (menu.classList.contains('show')) {
-                menu.classList.remove('show');
-                trigger.classList.remove('active');
-            }
+            toggleCronPresetDropdown();
         }
 
         async function launchConnector(id) {
@@ -796,8 +805,19 @@
                 const config = connectors[id];
                 if(config && config.schedule) {
                     document.getElementById('native-schedule-enabled').checked = config.schedule.enabled;
-                    document.getElementById('schedule-value').value = config.schedule.interval_value || 24;
-                    selectScheduleUnit(config.schedule.interval_unit || 'hours');
+                    document.getElementById('cron-expression').value = config.schedule.cron_expression || '0 0 * * *';
+                    
+                    // Try to match preset
+                    const presets = {
+                        '*/5 * * * *': 'Every 5 Minutes',
+                        '0 * * * *': 'Every Hour',
+                        '0 0 * * *': 'Daily at Midnight',
+                        '0 0 * * 1': 'Every Monday',
+                        '0 0 1 * *': '1st of Every Month'
+                    };
+                    const label = presets[config.schedule.cron_expression] || 'Custom Expression';
+                    document.getElementById('cron-preset-label').innerText = label;
+                    
                     document.getElementById('native-schedule-options').style.display = config.schedule.enabled ? 'block' : 'none';
                     
                     if(config.schedule.next_run) {
@@ -823,8 +843,7 @@
 
         async function saveNativeSchedule() {
             const enabled = document.getElementById('native-schedule-enabled').checked;
-            const value = document.getElementById('schedule-value').value;
-            const unit = document.getElementById('schedule-unit').value;
+            const cronExpr = document.getElementById('cron-expression').value;
             
             try {
                 const resp = await fetch('/api/connectors/schedule', {
@@ -833,8 +852,7 @@
                     body: JSON.stringify({
                         id: currentConnectorId,
                         enabled: enabled,
-                        interval_value: value,
-                        interval_unit: unit
+                        cron_expression: cronExpr
                     })
                 });
                 

@@ -8,9 +8,10 @@ import sys
 import threading
 import time
 import uuid
-import sys
 from datetime import datetime, timedelta
-from croniter import croniter
+from dateutil import rrule
+from dateutil.parser import parse as parse_date
+import pytz
 from curl_cffi import requests
 from urllib.parse import parse_qs, urlparse
 
@@ -68,13 +69,26 @@ def read_process_output(process):
         process.stdout.close()
 
 def calculate_next_run(schedule, base_time):
-    cron_expr = schedule.get("cron_expression", "0 0 * * *") # Default to daily midnight
+    rrule_str = schedule.get("rrule", "FREQ=DAILY;INTERVAL=1")
+    tz_name = schedule.get("timezone", "UTC")
+    
     try:
-        iter = croniter(cron_expr, base_time)
-        next_run = iter.get_next(datetime)
-        schedule["next_run"] = next_run.isoformat()
+        tz = pytz.timezone(tz_name)
+        # Ensure base_time is aware
+        if base_time.tzinfo is None:
+            base_time = tz.localize(base_time)
+        else:
+            base_time = base_time.astimezone(tz)
+            
+        rule = rrule.rrulestr(rrule_str, dtstart=base_time)
+        next_run = rule.after(base_time)
+        
+        if next_run:
+            schedule["next_run"] = next_run.isoformat()
+        else:
+            schedule["next_run"] = None
     except Exception as e:
-        logger.error(f"Error calculating next run for cron '{cron_expr}': {e}")
+        logger.error(f"Error calculating next run for RRULE '{rrule_str}': {e}")
         schedule["next_run"] = None
 
 class NativeScheduler:
@@ -111,11 +125,17 @@ class NativeScheduler:
             next_run_str = schedule.get("next_run")
             if not next_run_str:
                 # Initialize next run if missing
-                calculate_next_run(schedule, now)
+                calculate_next_run(schedule, datetime.now())
                 updated = True
                 continue
 
             next_run = datetime.fromisoformat(next_run_str)
+            
+            # Use the connector's timezone for comparison
+            tz_name = schedule.get("timezone", "UTC")
+            tz = pytz.timezone(tz_name)
+            now = datetime.now(tz)
+            
             if now >= next_run:
                 logger.info(f"[Scheduler] Triggering sync for connector: {config.get('name')} ({c_id})")
                 
@@ -142,6 +162,12 @@ class GPPRequestHandler(http.server.SimpleHTTPRequestHandler):
     def do_OPTIONS(self):
         self.send_response(200)
         self.end_headers()
+
+    def send_json(self, data, status=200):
+        self.send_response(status)
+        self.send_header('Content-type', 'application/json')
+        self.end_headers()
+        self.wfile.write(json.dumps(data).encode('utf-8'))
 
     def do_GET(self):
         parsed_url = urlparse(self.path)
@@ -200,57 +226,35 @@ class GPPRequestHandler(http.server.SimpleHTTPRequestHandler):
 
     def do_POST(self):
         parsed_url = urlparse(self.path)
+        path = parsed_url.path
         
-        if parsed_url.path == '/api/save':
-            content_length = int(self.headers['Content-Length'])
-            post_data = self.rfile.read(content_length)
-            data = json.loads(post_data.decode('utf-8'))
+        content_length = int(self.headers.get('Content-Length', 0))
+        post_data = self.rfile.read(content_length)
+        data = {}
+        if post_data:
+            try:
+                data = json.loads(post_data.decode('utf-8'))
+            except Exception as e:
+                logger.error(f"Error parsing POST data: {e}")
+
+        if path == '/api/save':
             self.handle_save_config(data)
-            return
-            
-        if parsed_url.path == '/api/connectors/save':
-            content_length = int(self.headers['Content-Length'])
-            post_data = self.rfile.read(content_length)
-            data = json.loads(post_data.decode('utf-8'))
+        elif path == '/api/connectors/save':
             self.handle_save_connector(data)
-            return
-            
-        if parsed_url.path == '/api/connectors/delete':
-            content_length = int(self.headers['Content-Length'])
-            post_data = self.rfile.read(content_length)
-            data = json.loads(post_data.decode('utf-8'))
+        elif path == '/api/connectors/delete':
             self.handle_delete_connector(data)
-            return
-
-        if parsed_url.path == '/api/connectors/load':
-            content_length = int(self.headers['Content-Length'])
-            post_data = self.rfile.read(content_length)
-            data = json.loads(post_data.decode('utf-8'))
+        elif path == '/api/connectors/load':
             self.handle_load_connector(data)
-            return
-
-        if parsed_url.path == '/api/connectors/schedule':
-            content_length = int(self.headers['Content-Length'])
-            post_data = self.rfile.read(content_length)
-            data = json.loads(post_data.decode('utf-8'))
+        elif path == '/api/scheduler/preview':
+            self.handle_scheduler_preview(data)
+        elif path == '/api/connectors/schedule':
             self.handle_save_schedule(data)
-            return
- 
-        if parsed_url.path == '/api/run':
-            content_length = int(self.headers['Content-Length'])
-            post_data = self.rfile.read(content_length)
-            data = json.loads(post_data.decode('utf-8'))
+        elif path == '/api/run':
             self.handle_run_download(data.get("id"))
-            return
- 
-        if parsed_url.path == '/api/search':
-            content_length = int(self.headers['Content-Length'])
-            post_data = self.rfile.read(content_length)
-            data = json.loads(post_data.decode('utf-8'))
+        elif path == '/api/search':
             self.handle_search(data)
-            return
- 
-        self.send_error(404, "Not Found")
+        else:
+            self.send_error(404, "Not Found")
 
     def read_connectors(self):
         if not os.path.exists(CONNECTORS_PATH):
@@ -303,7 +307,8 @@ class GPPRequestHandler(http.server.SimpleHTTPRequestHandler):
     def handle_save_schedule(self, data):
         c_id = data.get("id")
         enabled = data.get("enabled", False)
-        cron_expression = data.get("cron_expression", "0 0 * * *")
+        rrule_str = data.get("rrule", "FREQ=DAILY;INTERVAL=1")
+        timezone = data.get("timezone", "UTC")
         
         connectors = self.read_connectors()
         if c_id not in connectors:
@@ -312,23 +317,48 @@ class GPPRequestHandler(http.server.SimpleHTTPRequestHandler):
             
         schedule = connectors[c_id].get("schedule", {})
         schedule["enabled"] = enabled
-        schedule["cron_expression"] = cron_expression
+        schedule["rrule"] = rrule_str
+        schedule["timezone"] = timezone
         
-        # If enabled, calculate next run
         if enabled:
             calculate_next_run(schedule, datetime.now())
         else:
             schedule["next_run"] = None
             
         connectors[c_id]["schedule"] = schedule
-        
         if self.write_connectors(connectors):
-            self.send_response(200)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps({"status": "schedule_saved"}).encode('utf-8'))
+            self.send_json({"status": "success", "next_run": schedule.get("next_run")})
         else:
             self.send_error(500, "Failed to save schedule")
+
+    def handle_scheduler_preview(self, data):
+        rrule_str = data.get("rrule")
+        tz_name = data.get("timezone", "UTC")
+        count = data.get("count", 5)
+        
+        try:
+            tz = pytz.timezone(tz_name)
+            now = datetime.now(tz)
+            # Use rrulestr to parse the iCal string
+            rule = rrule.rrulestr(rrule_str, dtstart=now)
+            # Get next N occurrences
+            upcoming = []
+            curr = now
+            for _ in range(count):
+                nxt = rule.after(curr)
+                if nxt:
+                    upcoming.append(nxt.isoformat())
+                    curr = nxt
+                else:
+                    break
+            
+            self.send_json({
+                "status": "success",
+                "upcoming": upcoming
+            })
+        except Exception as e:
+            logger.error(f"Preview error: {e}")
+            self.send_json({"status": "error", "message": str(e)}, 400)
 
     def handle_delete_connector(self, data):
         c_id = data.get("id")

@@ -499,11 +499,46 @@
             min-height: 44px;
         }
 
-        /* Remove arrows from number input */
-        input[type=number]::-webkit-inner-spin-button, 
-        input[type=number]::-webkit-outer-spin-button { 
-            -webkit-appearance: none; 
-            margin: 0; 
+        .day-pill {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: rgba(255,255,255,0.03);
+        }
+
+        .day-pill:hover {
+            border-color: rgba(168, 85, 247, 0.4);
+            color: white;
+        }
+
+        .day-pill.active {
+            background: #a855f7;
+            border-color: #a855f7;
+            color: white;
+            box-shadow: 0 0 15px rgba(168, 85, 247, 0.4);
+        }
+
+        .preview-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 4px 0;
+        }
+
+        .preview-dot {
+            width: 4px;
+            height: 4px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
         }
 
         .interval-input:focus {
@@ -558,32 +593,62 @@
                 </div>
                 
                 <div id="native-schedule-options" style="display: none; animation: fadeIn 0.3s ease;">
-                    <div style="margin-bottom: 16px;">
-                        <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; font-weight: 500;">Schedule Preset</div>
+                    <!-- Frequency Selection -->
+                    <div style="margin-bottom: 20px;">
+                        <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; font-weight: 500;">Frequency</div>
                         <div class="custom-select-wrapper" style="position: relative;">
-                            <div class="custom-select-trigger" id="cron-preset-trigger" onclick="toggleCronPresetDropdown()">
-                                <span id="cron-preset-label">Custom Expression</span>
+                            <div class="custom-select-trigger" id="freq-trigger" onclick="toggleDropdown('freq-menu')">
+                                <span id="freq-label">Daily</span>
                             </div>
-                            <div class="custom-dropdown-menu" id="cron-preset-menu">
-                                <div class="custom-option" onclick="setCronPreset('*/5 * * * *', 'Every 5 Minutes')">Every 5 Minutes</div>
-                                <div class="custom-option" onclick="setCronPreset('0 * * * *', 'Every Hour')">Every Hour</div>
-                                <div class="custom-option" onclick="setCronPreset('0 0 * * *', 'Daily at Midnight')">Daily at Midnight</div>
-                                <div class="custom-option" onclick="setCronPreset('0 0 * * 1', 'Every Monday')">Every Monday</div>
-                                <div class="custom-option" onclick="setCronPreset('0 0 1 * *', '1st of Every Month')">1st of Every Month</div>
-                                <div class="custom-option selected" onclick="setCronPreset('', 'Custom Expression')">Custom Expression</div>
+                            <div class="custom-dropdown-menu" id="freq-menu">
+                                <div class="custom-option selected" onclick="setFrequency('DAILY', 'Daily')">Daily</div>
+                                <div class="custom-option" onclick="setFrequency('WEEKLY', 'Weekly')">Weekly</div>
+                                <div class="custom-option" onclick="setFrequency('MONTHLY', 'Monthly')">Monthly</div>
                             </div>
+                            <input type="hidden" id="recurrence-freq" value="DAILY">
                         </div>
                     </div>
 
-                    <div style="margin-bottom: 16px;">
-                        <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; font-weight: 500;">Cron Expression</div>
-                        <input type="text" id="cron-expression" placeholder="e.g. 0 0 1 * *" class="interval-input" style="width: 100%; text-align: left; padding-left: 16px;">
-                        <div style="font-size: 11px; color: var(--text-secondary); margin-top: 6px;">Format: min hour day month weekday</div>
+                    <!-- Interval -->
+                    <div style="margin-bottom: 20px; display: flex; align-items: center; gap: 12px;">
+                        <span style="font-size: 14px; color: var(--text-secondary);">Every</span>
+                        <input type="number" id="recurrence-interval" value="1" min="1" class="interval-input" onchange="updateSchedulePreview()" style="width: 70px;">
+                        <span id="interval-unit-label" style="font-size: 14px; color: var(--text-secondary);">days</span>
                     </div>
 
-                    <div id="schedule-status-text" style="font-size: 12px; color: #a855f7; font-weight: 500; display: flex; align-items: center; gap: 6px;">
-                        <span style="display: inline-block; width: 6px; height: 6px; background: #a855f7; border-radius: 50%; box-shadow: 0 0 8px #a855f7;"></span>
-                        <span id="next-run-display"></span>
+                    <!-- Weekly Specifics -->
+                    <div id="weekly-options" style="display: none; margin-bottom: 20px;">
+                        <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; font-weight: 500;">On these days</div>
+                        <div style="display: flex; gap: 8px;">
+                            <div class="day-pill" onclick="toggleDay('MO')">M</div>
+                            <div class="day-pill" onclick="toggleDay('TU')">T</div>
+                            <div class="day-pill" onclick="toggleDay('WE')">W</div>
+                            <div class="day-pill" onclick="toggleDay('TH')">T</div>
+                            <div class="day-pill" onclick="toggleDay('FR')">F</div>
+                            <div class="day-pill" onclick="toggleDay('SA')">S</div>
+                            <div class="day-pill" onclick="toggleDay('SU')">S</div>
+                        </div>
+                        <input type="hidden" id="recurrence-days" value="">
+                    </div>
+
+                    <!-- Monthly Specifics -->
+                    <div id="monthly-options" style="display: none; margin-bottom: 20px;">
+                        <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; font-weight: 500;">On day</div>
+                        <input type="number" id="recurrence-monthday" value="1" min="1" max="31" class="interval-input" onchange="updateSchedulePreview()" style="width: 70px;">
+                    </div>
+
+                    <!-- Time of Day -->
+                    <div style="margin-bottom: 20px;">
+                        <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; font-weight: 500;">At time</div>
+                        <input type="time" id="recurrence-time" value="09:00" class="interval-input" onchange="updateSchedulePreview()" style="width: 100%; text-align: left; padding-left: 16px;">
+                    </div>
+
+                    <!-- Live Preview -->
+                    <div style="background: rgba(0,0,0,0.2); border-radius: 12px; padding: 16px; border: 1px solid rgba(255,255,255,0.05);">
+                        <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">Next 5 Occurrences</div>
+                        <div id="preview-list" style="font-size: 13px; color: var(--text-main); line-height: 1.6;">
+                            <!-- Previews injected here -->
+                        </div>
                     </div>
                 </div>
                 <button class="btn-primary" onclick="saveNativeSchedule()" style="width: 100%; margin-top: 16px; font-size: 13px;">Save Schedule Settings</button>
@@ -681,38 +746,131 @@
 
         // Global click listener to close dropdowns
         document.addEventListener('click', (e) => {
-            const menu = document.getElementById('cron-preset-menu');
-            const trigger = document.getElementById('cron-preset-trigger');
-            if (menu && trigger && !trigger.contains(e.target) && !menu.contains(e.target)) {
-                menu.classList.remove('show');
-                trigger.classList.remove('active');
-            }
+            const dropdowns = ['freq-menu'];
+            dropdowns.forEach(id => {
+                const menu = document.getElementById(id);
+                const trigger = document.getElementById(id.replace('-menu', '-trigger'));
+                if (menu && trigger && !trigger.contains(e.target) && !menu.contains(e.target)) {
+                    menu.classList.remove('show');
+                    trigger.classList.remove('active');
+                }
+            });
         });
 
-        function toggleCronPresetDropdown() {
-            const menu = document.getElementById('cron-preset-menu');
-            const trigger = document.getElementById('cron-preset-trigger');
+        function toggleDropdown(id) {
+            const menu = document.getElementById(id);
+            const trigger = document.getElementById(id.replace('-menu', '-trigger'));
             menu.classList.toggle('show');
             trigger.classList.toggle('active');
         }
 
-        function setCronPreset(expr, label) {
-            document.getElementById('cron-preset-label').innerText = label;
-            if (expr) {
-                document.getElementById('cron-expression').value = expr;
-            }
+        function setFrequency(freq, label) {
+            document.getElementById('freq-label').innerText = label;
+            document.getElementById('recurrence-freq').value = freq;
             
+            // Show/hide specific options
+            document.getElementById('weekly-options').style.display = freq === 'WEEKLY' ? 'block' : 'none';
+            document.getElementById('monthly-options').style.display = freq === 'MONTHLY' ? 'block' : 'none';
+            
+            // Update interval label
+            const unitMap = { 'DAILY': 'days', 'WEEKLY': 'weeks', 'MONTHLY': 'months' };
+            document.getElementById('interval-unit-label').innerText = unitMap[freq];
+
             // Update selected class
-            const options = document.querySelectorAll('#cron-preset-menu .custom-option');
+            const options = document.querySelectorAll('#freq-menu .custom-option');
             options.forEach(opt => {
-                if (opt.innerText === label) {
-                    opt.classList.add('selected');
-                } else {
-                    opt.classList.remove('selected');
-                }
+                if (opt.innerText === label) opt.classList.add('selected');
+                else opt.classList.remove('selected');
             });
             
-            toggleCronPresetDropdown();
+            toggleDropdown('freq-menu');
+            updateSchedulePreview();
+        }
+
+        function toggleDay(day) {
+            const pills = document.querySelectorAll('.day-pill');
+            let selectedDays = document.getElementById('recurrence-days').value.split(',').filter(d => d);
+            
+            if (selectedDays.includes(day)) {
+                selectedDays = selectedDays.filter(d => d !== day);
+            } else {
+                selectedDays.push(day);
+            }
+            
+            document.getElementById('recurrence-days').value = selectedDays.join(',');
+            
+            // Update visual state
+            pills.forEach(p => {
+                if (p.innerText === day || (day === 'TH' && p.innerText === 'T' && selectedDays.includes('TH')) || (day === 'TU' && p.innerText === 'T' && selectedDays.includes('TU'))) {
+                    // This logic for 'T' and 'S' is tricky because labels are single letters
+                    // I'll update the toggleDay to pass the element instead
+                }
+            });
+            // Re-render active state based on hidden input
+            renderDayPills();
+            updateSchedulePreview();
+        }
+
+        function renderDayPills() {
+            const selectedDays = document.getElementById('recurrence-days').value.split(',');
+            const pills = document.querySelectorAll('.day-pill');
+            const dayMap = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'];
+            pills.forEach((p, i) => {
+                if (selectedDays.includes(dayMap[i])) p.classList.add('active');
+                else p.classList.remove('active');
+            });
+        }
+
+        function buildRRULE() {
+            const freq = document.getElementById('recurrence-freq').value;
+            const interval = document.getElementById('recurrence-interval').value;
+            const time = document.getElementById('recurrence-time').value;
+            const days = document.getElementById('recurrence-days').value;
+            const monthday = document.getElementById('recurrence-monthday').value;
+
+            let rule = `FREQ=${freq};INTERVAL=${interval}`;
+            
+            const [hour, min] = time.split(':');
+            rule += `;BYHOUR=${parseInt(hour)};BYMINUTE=${parseInt(min)}`;
+
+            if (freq === 'WEEKLY' && days) {
+                rule += `;BYDAY=${days}`;
+            } else if (freq === 'MONTHLY') {
+                rule += `;BYMONTHDAY=${monthday}`;
+            }
+
+            return rule;
+        }
+
+        async function updateSchedulePreview() {
+            const rule = buildRRULE();
+            const previewList = document.getElementById('preview-list');
+            
+            try {
+                const resp = await fetch('/api/scheduler/preview', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        rrule: rule,
+                        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                    })
+                });
+                
+                const data = await resp.json();
+                if (data.status === 'success') {
+                    previewList.innerHTML = data.upcoming.map(dt => {
+                        const date = new Date(dt);
+                        return `
+                            <div class="preview-item">
+                                <div class="preview-dot"></div>
+                                <span>${date.toLocaleDateString()} at ${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            } catch (e) {
+                previewList.innerHTML = '<div style="color: #ef4444; font-size: 11px;">Invalid schedule configuration</div>';
+            }
         }
 
         async function launchConnector(id) {
@@ -805,20 +963,31 @@
                 const config = connectors[id];
                 if(config && config.schedule) {
                     document.getElementById('native-schedule-enabled').checked = config.schedule.enabled;
-                    document.getElementById('cron-expression').value = config.schedule.cron_expression || '0 0 * * *';
                     
-                    // Try to match preset
-                    const presets = {
-                        '*/5 * * * *': 'Every 5 Minutes',
-                        '0 * * * *': 'Every Hour',
-                        '0 0 * * *': 'Daily at Midnight',
-                        '0 0 * * 1': 'Every Monday',
-                        '0 0 1 * *': '1st of Every Month'
-                    };
-                    const label = presets[config.schedule.cron_expression] || 'Custom Expression';
-                    document.getElementById('cron-preset-label').innerText = label;
+                    // Parse existing RRULE or use default
+                    const rruleStr = config.schedule.rrule || 'FREQ=DAILY;INTERVAL=1;BYHOUR=9;BYMINUTE=0';
+                    const parts = rruleStr.split(';');
+                    const params = {};
+                    parts.forEach(p => { const [k, v] = p.split('='); params[k] = v; });
+
+                    setFrequency(params.FREQ || 'DAILY', params.FREQ ? params.FREQ.charAt(0) + params.FREQ.slice(1).toLowerCase() : 'Daily');
+                    document.getElementById('recurrence-interval').value = params.INTERVAL || 1;
                     
+                    const hour = params.BYHOUR ? params.BYHOUR.padStart(2, '0') : '09';
+                    const min = params.BYMINUTE ? params.BYMINUTE.padStart(2, '0') : '00';
+                    document.getElementById('recurrence-time').value = `${hour}:${min}`;
+                    
+                    if (params.BYDAY) {
+                        document.getElementById('recurrence-days').value = params.BYDAY;
+                        renderDayPills();
+                    }
+                    
+                    if (params.BYMONTHDAY) {
+                        document.getElementById('recurrence-monthday').value = params.BYMONTHDAY;
+                    }
+
                     document.getElementById('native-schedule-options').style.display = config.schedule.enabled ? 'block' : 'none';
+                    updateSchedulePreview();
                     
                     if(config.schedule.next_run) {
                         const next = new Date(config.schedule.next_run);
@@ -843,7 +1012,7 @@
 
         async function saveNativeSchedule() {
             const enabled = document.getElementById('native-schedule-enabled').checked;
-            const cronExpr = document.getElementById('cron-expression').value;
+            const rruleStr = buildRRULE();
             
             try {
                 const resp = await fetch('/api/connectors/schedule', {
@@ -852,7 +1021,8 @@
                     body: JSON.stringify({
                         id: currentConnectorId,
                         enabled: enabled,
-                        cron_expression: cronExpr
+                        rrule: rruleStr,
+                        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
                     })
                 });
                 

@@ -409,53 +409,80 @@
         input:checked + .slider { background-color: #a855f7; }
         input:checked + .slider:before { transform: translateX(20px); }
 
-        /* Premium Select Styling */
-        .custom-select-wrapper {
-            position: relative;
-            flex-grow: 1;
-        }
-
-        .custom-select {
-            appearance: none;
-            width: 100%;
+        .custom-select-trigger {
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 12px;
-            color: white;
             padding: 10px 16px;
             font-size: 14px;
+            color: white;
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            outline: none;
-            backdrop-filter: blur(4px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s ease;
+            min-height: 44px;
         }
 
-        .custom-select:hover {
-            background: rgba(255, 255, 255, 0.08);
+        .custom-select-trigger:hover {
             border-color: rgba(168, 85, 247, 0.4);
-            transform: translateY(-1px);
+            background: rgba(255, 255, 255, 0.08);
         }
 
-        .custom-select:focus {
-            border-color: #a855f7;
-            box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.2);
-        }
-
-        .custom-select-wrapper::after {
+        .custom-select-trigger::after {
             content: '▾';
-            position: absolute;
-            right: 16px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-secondary);
-            pointer-events: none;
             font-size: 12px;
+            color: var(--text-secondary);
             transition: transform 0.3s ease;
         }
 
-        .custom-select-wrapper:focus-within::after {
-            transform: translateY(-50%) rotate(180deg);
+        .custom-select-trigger.active {
+            border-color: #a855f7;
+            box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.15);
+        }
+
+        .custom-select-trigger.active::after {
+            transform: rotate(180deg);
             color: #a855f7;
+        }
+
+        .custom-dropdown-menu {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background: #1e293b;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            margin-top: 8px;
+            z-index: 100;
+            display: none;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            padding: 6px;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .custom-dropdown-menu.show {
+            display: block;
+        }
+
+        .custom-option {
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .custom-option:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+        }
+
+        .custom-option.selected {
+            background: rgba(168, 85, 247, 0.1);
+            color: #d8b4fe;
         }
 
         .interval-input {
@@ -470,6 +497,7 @@
             font-weight: 600;
             transition: all 0.3s ease;
             outline: none;
+            min-height: 44px;
         }
 
         .interval-input:focus {
@@ -527,13 +555,17 @@
                     <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
                         <span style="font-size: 14px; color: var(--text-secondary); font-weight: 500;">Run every</span>
                         <input type="number" id="schedule-value" value="24" min="1" class="interval-input">
-                        <div class="custom-select-wrapper">
-                            <select id="schedule-unit" class="custom-select">
-                                <option value="minutes">Minutes</option>
-                                <option value="hours" selected>Hours</option>
-                                <option value="days">Days</option>
-                                <option value="months">Months</option>
-                            </select>
+                        <div class="custom-select-wrapper" style="position: relative; flex-grow: 1;">
+                            <div class="custom-select-trigger" id="schedule-unit-trigger" onclick="toggleScheduleUnitDropdown()">
+                                <span id="schedule-unit-label">Hours</span>
+                            </div>
+                            <div class="custom-dropdown-menu" id="schedule-unit-menu">
+                                <div class="custom-option" onclick="selectScheduleUnit('minutes')">Minutes</div>
+                                <div class="custom-option selected" onclick="selectScheduleUnit('hours')">Hours</div>
+                                <div class="custom-option" onclick="selectScheduleUnit('days')">Days</div>
+                                <div class="custom-option" onclick="selectScheduleUnit('months')">Months</div>
+                            </div>
+                            <input type="hidden" id="schedule-unit" value="hours">
                         </div>
                     </div>
                     <div id="schedule-status-text" style="font-size: 12px; color: #a855f7; font-weight: 500; display: flex; align-items: center; gap: 6px;">
@@ -573,11 +605,10 @@
 
         async function loadConnectors() {
             try {
-                const resp = await fetch('/api/connectors');
-                const connectors = await resp.json();
+                const response = await fetch('/api/connectors');
+                const connectors = await response.json();
                 
                 const grid = document.getElementById('connectors-grid');
-                // Keep the "New Connector" button
                 const newCard = grid.querySelector('.card-new');
                 grid.innerHTML = '';
                 grid.appendChild(newCard);
@@ -632,6 +663,46 @@
                 }
             } catch (e) {
                 console.error("Error loading connectors:", e);
+            }
+        }
+
+        // Global click listener to close dropdowns
+        document.addEventListener('click', (e) => {
+            const menu = document.getElementById('schedule-unit-menu');
+            const trigger = document.getElementById('schedule-unit-trigger');
+            if (menu && !trigger.contains(e.target) && !menu.contains(e.target)) {
+                menu.classList.remove('show');
+                trigger.classList.remove('active');
+            }
+        });
+
+        function toggleScheduleUnitDropdown() {
+            const menu = document.getElementById('schedule-unit-menu');
+            const trigger = document.getElementById('schedule-unit-trigger');
+            menu.classList.toggle('show');
+            trigger.classList.toggle('active');
+        }
+
+        function selectScheduleUnit(val) {
+            const label = val.charAt(0).toUpperCase() + val.slice(1);
+            document.getElementById('schedule-unit-label').innerText = label;
+            document.getElementById('schedule-unit').value = val;
+            
+            // Update selected class
+            const options = document.querySelectorAll('.custom-option');
+            options.forEach(opt => {
+                if (opt.innerText.toLowerCase() === val) {
+                    opt.classList.add('selected');
+                } else {
+                    opt.classList.remove('selected');
+                }
+            });
+            
+            const menu = document.getElementById('schedule-unit-menu');
+            const trigger = document.getElementById('schedule-unit-trigger');
+            if (menu.classList.contains('show')) {
+                menu.classList.remove('show');
+                trigger.classList.remove('active');
             }
         }
 
@@ -726,7 +797,7 @@
                 if(config && config.schedule) {
                     document.getElementById('native-schedule-enabled').checked = config.schedule.enabled;
                     document.getElementById('schedule-value').value = config.schedule.interval_value || 24;
-                    document.getElementById('schedule-unit').value = config.schedule.interval_unit || 'hours';
+                    selectScheduleUnit(config.schedule.interval_unit || 'hours');
                     document.getElementById('native-schedule-options').style.display = config.schedule.enabled ? 'block' : 'none';
                     
                     if(config.schedule.next_run) {

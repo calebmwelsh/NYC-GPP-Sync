@@ -408,6 +408,74 @@
         }
         input:checked + .slider { background-color: #a855f7; }
         input:checked + .slider:before { transform: translateX(20px); }
+
+        /* Premium Select Styling */
+        .custom-select-wrapper {
+            position: relative;
+            flex-grow: 1;
+        }
+
+        .custom-select {
+            appearance: none;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: white;
+            padding: 10px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            outline: none;
+            backdrop-filter: blur(4px);
+        }
+
+        .custom-select:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(168, 85, 247, 0.4);
+            transform: translateY(-1px);
+        }
+
+        .custom-select:focus {
+            border-color: #a855f7;
+            box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.2);
+        }
+
+        .custom-select-wrapper::after {
+            content: '▾';
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            pointer-events: none;
+            font-size: 12px;
+            transition: transform 0.3s ease;
+        }
+
+        .custom-select-wrapper:focus-within::after {
+            transform: translateY(-50%) rotate(180deg);
+            color: #a855f7;
+        }
+
+        .interval-input {
+            width: 80px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        .interval-input:focus {
+            border-color: #a855f7;
+            background: rgba(168, 85, 247, 0.05);
+        }
     </style>
 </head>
 
@@ -455,18 +523,23 @@
                     </label>
                 </div>
                 
-                <div id="native-schedule-options" style="display: none;">
-                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-                        <span style="font-size: 14px; color: var(--text-secondary);">Run every</span>
-                        <input type="number" id="schedule-value" value="24" min="1" style="width: 70px; background: rgba(0,0,0,0.3); border: 1px solid var(--card-border); border-radius: 8px; color: white; padding: 8px; text-align: center;">
-                        <select id="schedule-unit" style="background: rgba(0,0,0,0.3); border: 1px solid var(--card-border); border-radius: 8px; color: white; padding: 8px; flex-grow: 1;">
-                            <option value="minutes">Minutes</option>
-                            <option value="hours" selected>Hours</option>
-                            <option value="days">Days</option>
-                            <option value="months">Months</option>
-                        </select>
+                <div id="native-schedule-options" style="display: none; animation: fadeIn 0.3s ease;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+                        <span style="font-size: 14px; color: var(--text-secondary); font-weight: 500;">Run every</span>
+                        <input type="number" id="schedule-value" value="24" min="1" class="interval-input">
+                        <div class="custom-select-wrapper">
+                            <select id="schedule-unit" class="custom-select">
+                                <option value="minutes">Minutes</option>
+                                <option value="hours" selected>Hours</option>
+                                <option value="days">Days</option>
+                                <option value="months">Months</option>
+                            </select>
+                        </div>
                     </div>
-                    <div id="schedule-status-text" style="font-size: 12px; color: #a855f7;"></div>
+                    <div id="schedule-status-text" style="font-size: 12px; color: #a855f7; font-weight: 500; display: flex; align-items: center; gap: 6px;">
+                        <span style="display: inline-block; width: 6px; height: 6px; background: #a855f7; border-radius: 50%; box-shadow: 0 0 8px #a855f7;"></span>
+                        <span id="next-run-display"></span>
+                    </div>
                 </div>
                 <button class="btn-primary" onclick="saveNativeSchedule()" style="width: 100%; margin-top: 16px; font-size: 13px;">Save Schedule Settings</button>
             </div>
@@ -658,14 +731,15 @@
                     
                     if(config.schedule.next_run) {
                         const next = new Date(config.schedule.next_run);
-                        document.getElementById('schedule-status-text').innerText = `Next run: ${next.toLocaleString()}`;
+                        document.getElementById('next-run-display').innerText = `Next run: ${next.toLocaleString()}`;
+                        document.getElementById('schedule-status-text').style.opacity = '1';
                     } else {
-                        document.getElementById('schedule-status-text').innerText = '';
+                        document.getElementById('schedule-status-text').style.opacity = '0';
                     }
                 } else {
                     document.getElementById('native-schedule-enabled').checked = false;
                     document.getElementById('native-schedule-options').style.display = 'none';
-                    document.getElementById('schedule-status-text').innerText = '';
+                    document.getElementById('schedule-status-text').style.opacity = '0';
                 }
             });
 

@@ -1,6 +1,8 @@
 import json
 import os
+import random
 import sys
+import time
 from concurrent.futures import ThreadPoolExecutor
 
 # Add project root to sys.path
@@ -37,13 +39,24 @@ def bulk_ingest(max_workers: int = 4):
             print("No items found in results.json.")
             return
 
-        print(f"Starting bulk ingest for {len(results)} items...")
+        print(f"Starting bulk ingest for {len(results)} items (sequential mode)...")
         
-        ids = [r['id'] for r in results]
+        # Use a single client for all downloads to maintain session
+        client = HyraxClient()
         
-        # Parallel download
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            executor.map(process_item, ids)
+        for i, item in enumerate(results):
+            work_id = item['id']
+            print(f"[{i+1}/{len(results)}] Processing {work_id}...")
+            try:
+                download_work(client, work_id)
+            except Exception as e:
+                print(f"Error processing {work_id}: {e}")
+            
+            # Additional small delay between items beyond client's internal delay
+            if i < len(results) - 1:
+                delay = 2 + random.uniform(0, 2)
+                # print(f"Waiting {delay:.1f}s before next item...")
+                time.sleep(delay)
             
         print(f"\nBulk ingest completed for {len(results)} items.")
 

@@ -8,6 +8,7 @@ import sys
 import threading
 import time
 import uuid
+from datetime import datetime, timedelta
 from curl_cffi import requests
 from urllib.parse import parse_qs, urlparse
 
@@ -63,6 +64,66 @@ def read_process_output(process):
             server_logs.append(f"[Server Error reading process logs]: {e}")
     finally:
         process.stdout.close()
+
+class NativeScheduler:
+    """Background engine that triggers scheduled syncs."""
+    def __init__(self, connectors_path, schedule_script_path):
+        self.connectors_path = connectors_path
+        self.schedule_script_path = schedule_script_path
+        self.running = True
+
+    def run(self):
+        logger.info("Native Scheduler Engine started.")
+        while self.running:
+            try:
+                self.check_and_run()
+            except Exception as e:
+                logger.error(f"Scheduler loop error: {e}")
+            time.sleep(60) # Check every minute
+
+    def check_and_run(self):
+        if not os.path.exists(self.connectors_path):
+            return
+
+        with open(self.connectors_path, 'r', encoding='utf-8') as f:
+            connectors = json.load(f)
+
+        updated = False
+        now = datetime.now()
+
+        for c_id, config in connectors.items():
+            schedule = config.get("schedule")
+            if not schedule or not schedule.get("enabled"):
+                continue
+
+            next_run_str = schedule.get("next_run")
+            if not next_run_str:
+                # Initialize next run if missing
+                self.update_schedule(schedule, now)
+                updated = True
+                continue
+
+            next_run = datetime.fromisoformat(next_run_str)
+            if now >= next_run:
+                logger.info(f"[Scheduler] Triggering sync for connector: {config.get('name')} ({c_id})")
+                
+                # Spawn schedule.py as a background process
+                cmd = [sys.executable, self.schedule_script_path, "--connector", c_id]
+                subprocess.Popen(cmd, creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+                
+                # Update last and next run
+                schedule["last_run"] = now.isoformat()
+                self.update_schedule(schedule, now)
+                updated = True
+
+        if updated:
+            with open(self.connectors_path, 'w', encoding='utf-8') as f:
+                json.dump(connectors, f, indent=2)
+
+    def update_schedule(self, schedule, base_time):
+        interval_hours = int(schedule.get("interval_hours", 24))
+        next_run = base_time + timedelta(hours=interval_hours)
+        schedule["next_run"] = next_run.isoformat()
 
 class GPPRequestHandler(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
@@ -160,6 +221,13 @@ class GPPRequestHandler(http.server.SimpleHTTPRequestHandler):
             data = json.loads(post_data.decode('utf-8'))
             self.handle_load_connector(data)
             return
+
+        if parsed_url.path == '/api/connectors/schedule':
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            data = json.loads(post_data.decode('utf-8'))
+            self.handle_save_schedule(data)
+            return
  
         if parsed_url.path == '/api/run':
             content_length = int(self.headers['Content-Length'])
@@ -167,14 +235,14 @@ class GPPRequestHandler(http.server.SimpleHTTPRequestHandler):
             data = json.loads(post_data.decode('utf-8'))
             self.handle_run_download(data.get("id"))
             return
-
+ 
         if parsed_url.path == '/api/search':
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
             data = json.loads(post_data.decode('utf-8'))
             self.handle_search(data)
             return
-
+ 
         self.send_error(404, "Not Found")
 
     def read_connectors(self):
@@ -224,6 +292,37 @@ class GPPRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(json.dumps({"status": "saved", "id": c_id}).encode('utf-8'))
         else:
             self.send_error(500, "Failed to save connector")
+
+    def handle_save_schedule(self, data):
+        c_id = data.get("id")
+        enabled = data.get("enabled", False)
+        interval_hours = data.get("interval_hours", 24)
+        
+        connectors = self.read_connectors()
+        if c_id not in connectors:
+            self.send_error(404, "Connector not found")
+            return
+            
+        schedule = connectors[c_id].get("schedule", {})
+        schedule["enabled"] = enabled
+        schedule["interval_hours"] = interval_hours
+        
+        # If enabled and no next run, set it
+        if enabled and not schedule.get("next_run"):
+            next_run = datetime.now() + timedelta(hours=int(interval_hours))
+            schedule["next_run"] = next_run.isoformat()
+        elif not enabled:
+            schedule["next_run"] = None
+            
+        connectors[c_id]["schedule"] = schedule
+        
+        if self.write_connectors(connectors):
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "schedule_saved"}).encode('utf-8'))
+        else:
+            self.send_error(500, "Failed to save schedule")
 
     def handle_delete_connector(self, data):
         c_id = data.get("id")
@@ -506,20 +605,21 @@ class GPPRequestHandler(http.server.SimpleHTTPRequestHandler):
 
             item_path = f"concern/nyc_government_publications/{work_id}"
             item_url = f"{client.base_url}/{item_path}"
-            download_url = f"{client.base_url}/downloads/{file_id}"
+            download_path = f"downloads/{file_id}"
             
-            client.get(item_path, headers={"Referer": f"{client.base_url}/"})
+            # Use client.get to ensure Akamai session and robust retries
+            client.get(item_path, referer=f"{client.base_url}/")
             
             headers = {
                 "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
                 "Sec-Fetch-Dest": "document",
                 "Sec-Fetch-Mode": "navigate",
                 "Sec-Fetch-Site": "same-origin",
-                "Sec-Fetch-User": "?1",
-                "Referer": item_url
+                "Sec-Fetch-User": "?1"
             }
 
-            r = client.session.get(download_url, headers=headers, impersonate=client.impersonate, stream=True, timeout=60)
+            # Use client.get for the actual download as well to get retry logic
+            r = client.get(download_path, referer=item_url, headers=headers, stream=True, timeout=60)
             r.raise_for_status()
             
             content_length = r.headers.get('Content-Length')
@@ -548,6 +648,12 @@ if __name__ == "__main__":
     if not os.path.exists(ENV_PATH):
         with open(ENV_PATH, 'w', encoding='utf-8') as f:
             f.write("# Environment Variables for GPP\n")
+
+    # Start Native Scheduler
+    schedule_script = os.path.join(PROJECT_ROOT, 'cli', 'schedule.py')
+    scheduler = NativeScheduler(CONNECTORS_PATH, schedule_script)
+    sched_thread = threading.Thread(target=scheduler.run, daemon=True)
+    sched_thread.start()
 
     logger.info(f"Starting server at http://localhost:{PORT}")
     socketserver.TCPServer.allow_reuse_address = True

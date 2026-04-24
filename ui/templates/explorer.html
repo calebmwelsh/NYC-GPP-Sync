@@ -730,7 +730,10 @@
                 SEARCH_SUBJECT: Array.from(state.subject).join('|'),
                 SEARCH_REPORT_TYPE: Array.from(state.report).join('|'),
                 SEARCH_FISCAL_YEAR: Array.from(state.year).join('|'),
-                SEARCH_BOROUGH: Array.from(state.borough).join('|')
+                SEARCH_BOROUGH: Array.from(state.borough).join('|'),
+                SEARCH_LANGUAGE: config.current_env.SEARCH_LANGUAGE || '',
+                SEARCH_CALENDAR_YEAR: config.current_env.SEARCH_CALENDAR_YEAR || '',
+                SEARCH_MANDATED_REPORT: config.current_env.SEARCH_MANDATED_REPORT || ''
             };
         }
 

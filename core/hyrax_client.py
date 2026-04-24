@@ -39,6 +39,7 @@ class HyraxClient:
             "Connection": "keep-alive",
         }
         
+        self.request_delay = float(os.getenv("GPP_REQUEST_DELAY", "1.5"))
         self.initialized = False
 
     def _initialize_session(self):
@@ -75,9 +76,17 @@ class HyraxClient:
             headers.update(kwargs.pop("headers"))
             
         max_retries = 3
-        backoff_factor = 2
+        backoff_factor = 3 # Increased from 2
         
         for attempt in range(max_retries):
+            # Add randomized delay to mimic human behavior
+            current_delay = self.request_delay + random.uniform(0.5, 2.0)
+            if attempt > 0:
+                current_delay *= (backoff_factor ** attempt)
+            
+            logger.debug(f"Waiting {current_delay:.2f}s before request...")
+            time.sleep(current_delay)
+            
             try:
                 logger.debug(f"Requesting {url} (Attempt {attempt + 1})")
                 

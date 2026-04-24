@@ -231,6 +231,18 @@
             color: var(--text-main);
         }
 
+        .btn-schedule {
+            background: rgba(168, 85, 247, 0.1);
+            color: var(--text-secondary);
+            border: 1px solid rgba(168, 85, 247, 0.3);
+        }
+
+        .btn-schedule:hover {
+            background: rgba(168, 85, 247, 0.2);
+            color: var(--text-main);
+            border-color: var(--accent-primary);
+        }
+
         @keyframes fadeInDown {
             from { opacity: 0; transform: translateY(-20px); }
             to { opacity: 1; transform: translateY(0); }
@@ -239,6 +251,94 @@
         @keyframes fadeIn {
             from { opacity: 0; transform: scale(0.95); }
             to { opacity: 1; transform: scale(1); }
+        }
+
+        /* Modal for Scheduling */
+        .modal-overlay {
+            display: none; 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: rgba(0,0,0,0.6); 
+            backdrop-filter: blur(8px); 
+            z-index: 1000; 
+            justify-content: center; 
+            align-items: center;
+        }
+
+        .modal-content {
+            background: var(--card-bg); 
+            padding: 40px; 
+            border-radius: 24px; 
+            width: 550px; 
+            max-width: 90%;
+            border: 1px solid var(--card-border); 
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+            animation: modalPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes modalPop {
+            from { opacity: 0; transform: scale(0.9) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .code-block {
+            background: #0f172a;
+            padding: 16px;
+            border-radius: 12px;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 13px;
+            color: #e2e8f0;
+            margin: 16px 0;
+            border: 1px solid rgba(255,255,255,0.1);
+            position: relative;
+            overflow-x: auto;
+            white-space: pre;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            border-radius: 6px;
+            padding: 4px 8px;
+            color: var(--text-secondary);
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .copy-btn:hover {
+            background: rgba(255,255,255,0.2);
+            color: var(--text-main);
+        }
+
+        .modal-title {
+            margin-top: 0; 
+            font-size: 24px; 
+            color: var(--text-main);
+            letter-spacing: -0.5px;
+        }
+
+        .modal-subtitle {
+            color: var(--text-secondary); 
+            font-size: 14px; 
+            margin-bottom: 24px;
+            line-height: 1.6;
+        }
+
+        .step-list {
+            margin: 20px 0;
+            padding-left: 20px;
+            color: var(--text-main);
+            font-size: 14px;
+        }
+
+        .step-list li {
+            margin-bottom: 12px;
         }
 
         /* Toast Notifications */
@@ -278,6 +378,36 @@
             from { opacity: 1; }
             to { opacity: 0; }
         }
+
+        /* Toggle Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(255,255,255,0.1);
+            transition: .4s;
+            border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider { background-color: #a855f7; }
+        input:checked + .slider:before { transform: translateX(20px); }
     </style>
 </head>
 
@@ -307,8 +437,61 @@
         </div>
     </div>
 
+    <!-- Scheduling Modal -->
+    <div id="schedule-modal-overlay" class="modal-overlay" onclick="if(event.target === this) closeScheduleModal()">
+        <div class="modal-content">
+            <h2 class="modal-title">Schedule Report</h2>
+            <p class="modal-subtitle">Configure how you want to run this sync automatically.</p>
+            
+            <div style="background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.2); padding: 20px; border-radius: 16px; margin-bottom: 24px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <div>
+                        <div style="font-weight: 600; font-size: 15px; color: var(--text-main);">Native Background Sync</div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">Runs as long as this UI server is active.</div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="native-schedule-enabled">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                
+                <div id="native-schedule-options" style="display: none;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span style="font-size: 14px; color: var(--text-secondary);">Run every</span>
+                        <input type="number" id="schedule-interval" value="24" min="1" style="width: 70px; background: rgba(0,0,0,0.3); border: 1px solid var(--card-border); border-radius: 8px; color: white; padding: 8px; text-align: center;">
+                        <span style="font-size: 14px; color: var(--text-secondary);">hours</span>
+                    </div>
+                    <div id="schedule-status-text" style="margin-top: 12px; font-size: 12px; color: #a855f7;"></div>
+                </div>
+                <button class="btn-primary" onclick="saveNativeSchedule()" style="width: 100%; margin-top: 16px; font-size: 13px;">Save Schedule Settings</button>
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid var(--card-border); margin: 24px 0;">
+
+            <div style="font-weight: 600; font-size: 13px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;">Method 2: Windows Task Scheduler</div>
+            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Best for 24/7 reliability even when this UI is closed.</div>
+            <div class="code-block" id="schedule-command">
+                <button class="copy-btn" onclick="copyScheduleCommand()">Copy</button>
+                <span id="command-text"></span>
+            </div>
+
+            <ol class="step-list">
+                <li>Open <b>Task Scheduler</b> on your Windows device.</li>
+                <li>Click <b>"Create Basic Task..."</b> in the Actions pane.</li>
+                <li>Set your preferred trigger (Daily, Weekly, etc.).</li>
+                <li>Select <b>"Start a program"</b> as the Action.</li>
+                <li>Paste the command above into the <b>"Program/script"</b> or <b>"Add arguments"</b> fields.</li>
+            </ol>
+
+            <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
+                <button class="btn-primary" onclick="closeScheduleModal()" style="padding: 12px 24px;">Got it</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', loadConnectors);
+        let currentConnectorId = null;
 
         async function loadConnectors() {
             try {
@@ -357,6 +540,9 @@
                         <div class="card-actions">
                             <button class="btn-danger" onclick="deleteConnector('${id}')" title="Delete">
                                 <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                            <button class="btn-schedule" onclick="openScheduleModal('${id}', '${config.name}')" title="Schedule">
+                                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                             </button>
                             <button class="btn-primary" onclick="launchConnector('${id}')">
                                 Launch Explorer
@@ -448,6 +634,80 @@
                     showToast("Error deleting connector: " + e.message, "error");
                 }
             }
+        }
+
+        function openScheduleModal(id, name) {
+            currentConnectorId = id;
+            const commandText = document.getElementById('command-text');
+            const cmd = `python cli/schedule.py --connector "${name}" --rows 10`;
+            commandText.innerText = cmd;
+            
+            // Load existing schedule info
+            fetch('/api/connectors').then(r => r.json()).then(connectors => {
+                const config = connectors[id];
+                if(config && config.schedule) {
+                    document.getElementById('native-schedule-enabled').checked = config.schedule.enabled;
+                    document.getElementById('schedule-interval').value = config.schedule.interval_hours || 24;
+                    document.getElementById('native-schedule-options').style.display = config.schedule.enabled ? 'block' : 'none';
+                    
+                    if(config.schedule.next_run) {
+                        const next = new Date(config.schedule.next_run);
+                        document.getElementById('schedule-status-text').innerText = `Next run: ${next.toLocaleString()}`;
+                    } else {
+                        document.getElementById('schedule-status-text').innerText = '';
+                    }
+                } else {
+                    document.getElementById('native-schedule-enabled').checked = false;
+                    document.getElementById('native-schedule-options').style.display = 'none';
+                    document.getElementById('schedule-status-text').innerText = '';
+                }
+            });
+
+            document.getElementById('schedule-modal-overlay').style.display = 'flex';
+        }
+
+        document.getElementById('native-schedule-enabled').onchange = function() {
+            document.getElementById('native-schedule-options').style.display = this.checked ? 'block' : 'none';
+        };
+
+        async function saveNativeSchedule() {
+            const enabled = document.getElementById('native-schedule-enabled').checked;
+            const interval = document.getElementById('schedule-interval').value;
+            
+            try {
+                const resp = await fetch('/api/connectors/schedule', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        id: currentConnectorId,
+                        enabled: enabled,
+                        interval_hours: interval
+                    })
+                });
+                
+                if(resp.ok) {
+                    showToast("Schedule settings saved.");
+                    closeScheduleModal();
+                    loadConnectors();
+                } else {
+                    showToast("Failed to save schedule.", "error");
+                }
+            } catch(e) {
+                showToast("Error: " + e.message, "error");
+            }
+        }
+
+        function closeScheduleModal() {
+            document.getElementById('schedule-modal-overlay').style.display = 'none';
+        }
+
+        function copyScheduleCommand() {
+            const cmd = document.getElementById('command-text').innerText;
+            navigator.clipboard.writeText(cmd).then(() => {
+                showToast("Command copied to clipboard!");
+            }).catch(err => {
+                showToast("Failed to copy command.", "error");
+            });
         }
     </script>
 </body>

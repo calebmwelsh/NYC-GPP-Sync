@@ -10,6 +10,11 @@
       "SEARCH_REPORT_TYPE": "",
       "SEARCH_FISCAL_YEAR": "",
       "SEARCH_BOROUGH": ""
+    },
+    "schedule": {
+      "enabled": true,
+      "interval_hours": "1",
+      "next_run": "2026-04-24T13:24:05.591685"
     }
   },
   "42da3f557da24e11b20991c531fba2d4": {
@@ -36,6 +41,22 @@
       "SEARCH_REPORT_TYPE": "",
       "SEARCH_FISCAL_YEAR": "",
       "SEARCH_BOROUGH": ""
+    }
+  },
+  "c94a1504730942ceb72c77fd814ee465": {
+    "name": "progress report",
+    "description": "",
+    "filters": {
+      "SEARCH_QUERY": "progress report",
+      "SEARCH_LIMIT": "5",
+      "SEARCH_AGENCY": "",
+      "SEARCH_SUBJECT": "",
+      "SEARCH_REPORT_TYPE": "",
+      "SEARCH_FISCAL_YEAR": "",
+      "SEARCH_BOROUGH": "",
+      "SEARCH_LANGUAGE": "",
+      "SEARCH_CALENDAR_YEAR": "",
+      "SEARCH_MANDATED_REPORT": ""
     }
   }
 }

@@ -22,3 +22,4 @@ Thumbs.db
 AGENTS.md
 403_error_testing.md
 data/
+.claude/settings.local.json

@@ -639,23 +639,16 @@ class GPPRequestHandler(http.server.SimpleHTTPRequestHandler):
             if not file_id:
                 file_id = work_id
 
-            item_path = f"concern/nyc_government_publications/{work_id}"
-            item_url = f"{client.base_url}/{item_path}"
             download_path = f"downloads/{file_id}"
-            
-            # Use client.get to ensure Akamai session and robust retries
-            client.get(item_path, referer=f"{client.base_url}/")
-            
+
+            # Warm up session with a natural navigation trail before downloading
+            referer_url = client._warmup_for_work(work_id) if work_id else f"{client.base_url}/"
+
             headers = {
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-                "Sec-Fetch-Dest": "document",
-                "Sec-Fetch-Mode": "navigate",
-                "Sec-Fetch-Site": "same-origin",
-                "Sec-Fetch-User": "?1"
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             }
 
-            # Use client.get for the actual download as well to get retry logic
-            r = client.get(download_path, referer=item_url, headers=headers, stream=True, timeout=60)
+            r = client.get(download_path, referer=referer_url, headers=headers, stream=True, timeout=60)
             r.raise_for_status()
             
             content_length = r.headers.get('Content-Length')

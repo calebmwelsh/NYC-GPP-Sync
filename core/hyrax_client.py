@@ -28,27 +28,23 @@ class HyraxClient:
         
         self.base_url = base_url or os.getenv("GPP_BASE_URL", "https://a860-gpp.nyc.gov")
         self.session = requests.Session()
-        self.impersonate = "safari" # Switched from chrome as safari seems more resilient for Akamai
-        
-        # Base headers
+        self.impersonate = "safari" # Safari TLS fingerprint is more resilient for Akamai
+
+        # User agents must match the impersonation target to avoid TLS/UA fingerprint mismatch
+        self.user_agents = [
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15",
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+        ]
+
+        # Base headers aligned with Safari behaviour
         self.headers = {
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language": "en-US,en;q=0.9",
             "Accept-Encoding": "gzip, deflate, br",
             "Connection": "keep-alive",
             "Upgrade-Insecure-Requests": "1",
-            "Sec-Fetch-Dest": "document",
-            "Sec-Fetch-Mode": "navigate",
-            "Sec-Fetch-Site": "none",
-            "Sec-Fetch-User": "?1"
         }
-        
-        self.user_agents = [
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
-        ]
         
         self.request_delay = float(os.getenv("GPP_REQUEST_DELAY", "1.5"))
         self.initialized = False
@@ -204,39 +200,82 @@ class HyraxClient:
         
         return self.request("GET", path, headers=headers, **kwargs)
 
+    def _warmup_for_work(self, work_id: str) -> Optional[str]:
+        """
+        Build a natural navigation trail before downloading a work's file.
+        Returns the best available referer URL, or None if warmup failed entirely.
+        Sequence: Root (already done in init) -> Catalog HTML -> Concern page
+        """
+        # Step 1: Visit catalog search results page to look like a real user browsing
+        catalog_search_url = f"{self.base_url}/catalog?search_field=all_fields&q="
+        logger.info(f"Warming up session: visiting catalog search page...")
+        try:
+            resp = self.session.get(
+                catalog_search_url,
+                headers=self._get_random_headers(),
+                impersonate=self.impersonate,
+                timeout=20
+            )
+            if resp.status_code == 200:
+                time.sleep(random.uniform(1.5, 3.0))
+        except Exception as e:
+            logger.debug(f"Catalog search warmup failed: {e}")
+
+        # Step 2: Try the concern HTML page with catalog search as referer
+        concern_path = f"concern/nyc_government_publications/{work_id}"
+        concern_url = f"{self.base_url}/{concern_path}"
+        logger.info(f"Visiting item page {concern_path} before download...")
+        resp = self.get(concern_path, referer=catalog_search_url)
+        if resp.status_code == 200:
+            logger.info(f"Item page visit successful.")
+            return concern_url
+
+        # Step 3: Concern page failed — use catalog item page as fallback referer
+        catalog_item_url = f"{self.base_url}/catalog/{work_id}"
+        logger.warning(f"Concern page returned {resp.status_code}. Falling back to catalog item as referer.")
+        try:
+            resp2 = self.session.get(
+                catalog_item_url,
+                headers=self._get_random_headers(),
+                impersonate=self.impersonate,
+                timeout=20
+            )
+            if resp2.status_code == 200:
+                time.sleep(random.uniform(1.0, 2.5))
+                return catalog_item_url
+        except Exception as e:
+            logger.debug(f"Catalog item warmup failed: {e}")
+
+        # Return catalog item URL as best-effort referer even if it failed
+        return catalog_item_url
+
     def download_file(self, file_id: str, output_path: str, work_id: Optional[str] = None):
         """
         Download a file with Akamai bypass logic.
-        sequence: Home -> Item Page (if work_id provided) -> Download
+        sequence: Root (init) -> Catalog Search -> Item/Concern Page -> Download
         """
         if not self.initialized:
             self._initialize_session()
-            
-        # 1. Visit item page if work_id is provided
-        item_url = None
+
+        # 1. Warm up the session with a natural navigation trail
+        referer_url = f"{self.base_url}/"
         if work_id:
-            logger.info(f"Visiting item page concern/nyc_government_publications/{work_id} before download...")
-            item_path = f"concern/nyc_government_publications/{work_id}"
-            item_url = f"{self.base_url}/{item_path}"
-            # Visit item page with root as referer
-            self.get(item_path, referer=f"{self.base_url}/")
-            
+            referer_url = self._warmup_for_work(work_id) or f"{self.base_url}/"
+
+        # Reset counter so warmup 403s don't carry over and poison the download attempt
+        self.consecutive_403s = 0
+
         # 2. Download the file
         logger.info(f"Downloading file {file_id} to {output_path}...")
         download_path = f"downloads/{file_id}"
-        
-        # Explicit headers for the download request to mimic same-origin navigation
+
+        # Safari-consistent headers for the download — no Sec-Fetch-* (Safari omits them)
         headers = {
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-            "Sec-Fetch-Dest": "document",
-            "Sec-Fetch-Mode": "navigate",
-            "Sec-Fetch-Site": "same-origin",
-            "Sec-Fetch-User": "?1"
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         }
-        
-        # Important: The referer must be the item page for the download to succeed
-        res = self.get(download_path, referer=item_url, headers=headers, stream=True, timeout=60)
-        
+
+        res = self.get(download_path, referer=referer_url, headers=headers, stream=True, timeout=60)
+
         if res.status_code == 200:
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
             with open(output_path, 'wb') as f:

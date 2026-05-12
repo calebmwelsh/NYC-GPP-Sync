@@ -290,10 +290,12 @@ class GPPRequestHandler(http.server.SimpleHTTPRequestHandler):
         filters = data.get("filters", {})
         
         connectors = self.read_connectors()
+        existing = connectors.get(c_id, {})
         connectors[c_id] = {
             "name": name,
             "description": description,
-            "filters": filters
+            "filters": filters,
+            "schedule": existing.get("schedule", {})
         }
         
         if self.write_connectors(connectors):

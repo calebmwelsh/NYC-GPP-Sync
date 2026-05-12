@@ -624,6 +624,10 @@
             const resp = await fetch('/api/config');
             config = await resp.json();
 
+            if (!config.filters || Object.keys(config.filters).length === 0) {
+                showToast("Filter options could not be loaded. Check that data/filters.json exists.", "error");
+            }
+
             // Map ENV to state
             syncEnvToState(config.current_env);
 

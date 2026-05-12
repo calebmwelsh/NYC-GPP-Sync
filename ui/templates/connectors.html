@@ -1215,17 +1215,9 @@
                     document.getElementById('native-schedule-options').style.display = config.schedule.enabled ? 'block' : 'none';
                     updateSchedulePreview();
                     
-                    if(config.schedule.next_run) {
-                        const next = new Date(config.schedule.next_run);
-                        document.getElementById('next-run-display').innerText = `Next run: ${next.toLocaleString()}`;
-                        document.getElementById('schedule-status-text').style.opacity = '1';
-                    } else {
-                        document.getElementById('schedule-status-text').style.opacity = '0';
-                    }
                 } else {
                     document.getElementById('native-schedule-enabled').checked = false;
                     document.getElementById('native-schedule-options').style.display = 'none';
-                    document.getElementById('schedule-status-text').style.opacity = '0';
                 }
             });
 
